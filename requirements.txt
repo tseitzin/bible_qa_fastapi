@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+openai
+psycopg2-binary
+python-dotenv
+gunicorn
+pydantic
+pydantic-settings
+
+# Testing dependencies
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+httpx
