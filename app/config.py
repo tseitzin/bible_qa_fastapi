@@ -2,8 +2,8 @@
 import os
 from urllib.parse import urlparse
 from functools import lru_cache
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, env="DEBUG")
     
     # Database Configuration (Heroku compatible)
-    database_url: str = Field(default=None, env="DATABASE_URL")
+    database_url: str = Field(default="", env="DATABASE_URL")
     db_name: str = Field(default="", env="DB_NAME")
     db_user: str = Field(default="", env="DB_USER")
     db_password: str = Field(default="", env="DB_PASSWORD")
@@ -31,6 +31,8 @@ class Settings(BaseSettings):
         env="ALLOWED_ORIGINS"
     )
     
+    @computed_field
+    @computed_field
     @property
     def allowed_origins(self) -> list[str]:
         """Parse allowed origins from comma-separated string."""
@@ -39,7 +41,7 @@ class Settings(BaseSettings):
     @property
     def db_config(self) -> dict:
         """Get database configuration, preferring DATABASE_URL for Heroku."""
-        if self.database_url:
+        if self.database_url and self.database_url.strip():
             # Parse Heroku DATABASE_URL
             parsed = urlparse(self.database_url)
             return {
@@ -49,7 +51,7 @@ class Settings(BaseSettings):
                 'host': parsed.hostname,
                 'port': parsed.port or 5432
             }
-        elif self.db_name and self.db_user:
+        elif self.db_name.strip() and self.db_user.strip():
             # Use individual environment variables
             return {
                 'dbname': self.db_name,
@@ -68,10 +70,11 @@ class Settings(BaseSettings):
                 'port': 5432
             }
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore"
+    )
 
 @lru_cache()
 def get_settings() -> Settings:

@@ -6,12 +6,12 @@ from app.config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 
 @contextmanager
 def get_db_connection():
     """Context manager for database connections."""
+    settings = get_settings()
     conn = None
     try:
         # Use the db_config property which handles both Heroku and local configs
