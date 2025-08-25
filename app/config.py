@@ -15,10 +15,10 @@ class Settings(BaseSettings):
     
     # Database Configuration (Heroku compatible)
     database_url: str = Field(default=None, env="DATABASE_URL")
-    db_name: str = Field(default=None, env="DB_NAME")
-    db_user: str = Field(default=None, env="DB_USER")
-    db_password: str = Field(default=None, env="DB_PASSWORD")
-    db_host: str = Field(default=None, env="DB_HOST")
+    db_name: str = Field(default="", env="DB_NAME")
+    db_user: str = Field(default="", env="DB_USER")
+    db_password: str = Field(default="", env="DB_PASSWORD")
+    db_host: str = Field(default="localhost", env="DB_HOST")
     db_port: int = Field(default=5432, env="DB_PORT")
     
     # OpenAI Configuration
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
                 'host': parsed.hostname,
                 'port': parsed.port or 5432
             }
-        else:
+        elif self.db_name and self.db_user:
             # Use individual environment variables
             return {
                 'dbname': self.db_name,
@@ -57,6 +57,15 @@ class Settings(BaseSettings):
                 'password': self.db_password,
                 'host': self.db_host,
                 'port': self.db_port
+            }
+        else:
+            # Fallback configuration for development
+            return {
+                'dbname': 'bible_qa',
+                'user': 'postgres',
+                'password': 'postgres',
+                'host': 'localhost',
+                'port': 5432
             }
     
     class Config:

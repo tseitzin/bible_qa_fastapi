@@ -1,23 +1,24 @@
 """OpenAI service for handling AI completions."""
 from openai import OpenAI
-from app.config import get_settings
 import logging
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 
 class OpenAIService:
     """Service for interacting with OpenAI API."""
     
     def __init__(self):
+        from app.config import get_settings
+        settings = get_settings()
         self.client = OpenAI(api_key=settings.openai_api_key)
+        self.model = settings.openai_model
     
     async def get_bible_answer(self, question: str) -> str:
         """Get an AI-generated answer to a Bible-related question."""
         try:
             response = self.client.chat.completions.create(
-                model=settings.openai_model,
+                model=self.model,
                 messages=[
                     {
                         "role": "system", 
