@@ -14,13 +14,11 @@ def get_db_connection():
     """Context manager for database connections."""
     conn = None
     try:
+        # Use the db_config property which handles both Heroku and local configs
+        db_config = settings.db_config
         conn = psycopg2.connect(
-            dbname=settings.db_name,
-            user=settings.db_user,
-            password=settings.db_password,
-            host=settings.db_host,
-            port=settings.db_port,
-            cursor_factory=RealDictCursor
+            cursor_factory=RealDictCursor,
+            **db_config
         )
         yield conn
     except psycopg2.Error as e:

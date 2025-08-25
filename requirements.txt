@@ -6,6 +6,7 @@ python-dotenv
 gunicorn
 pydantic
 pydantic-settings
+urllib3
 
 # Testing dependencies
 pytest

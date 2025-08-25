@@ -98,7 +98,69 @@ See `.env.example` for required configuration.
 
 ## Deployment
 
-This project is configured for Heroku deployment with the included `Procfile`.
+### Heroku Deployment
+
+This project is configured for easy Heroku deployment:
+
+1. **Prerequisites:**
+   ```bash
+   # Install Heroku CLI
+   # macOS: brew install heroku/brew/heroku
+   # Windows: Download from https://devcenter.heroku.com/articles/heroku-cli
+   
+   # Login to Heroku
+   heroku login
+   ```
+
+2. **Deploy to Heroku:**
+   ```bash
+   # Create Heroku app
+   heroku create your-bible-qa-api
+   
+   # Add PostgreSQL addon
+   heroku addons:create heroku-postgresql:essential-0
+   
+   # Set environment variables
+   heroku config:set OPENAI_API_KEY=your_openai_api_key_here
+   heroku config:set ALLOWED_ORIGINS=https://your-vue-app.netlify.app,https://your-vue-app.vercel.app
+   
+   # Deploy
+   git push heroku main
+   
+   # Database tables will be created automatically via postdeploy script
+   ```
+
+3. **One-Click Deploy:**
+   [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
+4. **Environment Variables for Heroku:**
+   - `OPENAI_API_KEY`: Your OpenAI API key (required)
+   - `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins (include your Vue.js app URL)
+   - `DEBUG`: Set to `false` for production
+   - `DATABASE_URL`: Automatically set by Heroku PostgreSQL addon
+
+### Frontend Integration
+
+To connect your Vue.js frontend:
+
+1. **Update your Vue.js API base URL:**
+   ```javascript
+   // In your Vue.js app
+   const API_BASE_URL = process.env.NODE_ENV === 'production' 
+     ? 'https://your-bible-qa-api.herokuapp.com'
+     : 'http://localhost:8000';
+   ```
+
+2. **Add your frontend URL to CORS:**
+   ```bash
+   # Add your deployed frontend URL to allowed origins
+   heroku config:set ALLOWED_ORIGINS=https://your-vue-app.netlify.app,http://localhost:5173
+   ```
+
+3. **API Endpoints for your Vue.js app:**
+   - `GET /` - Health check
+   - `POST /api/ask` - Submit Bible questions
+   - `GET /api/history/{user_id}` - Get question history
 
 ## Architecture Benefits
 
