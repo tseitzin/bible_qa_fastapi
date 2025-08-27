@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 # Get settings
 settings = get_settings()
 
+# Log CORS configuration for debugging
+logger.info(f"CORS allowed origins: {settings.allowed_origins}")
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.app_name,
@@ -31,8 +33,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origin_regex=r"https://.*\.herokuapp\.com",
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
