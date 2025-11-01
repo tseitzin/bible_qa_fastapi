@@ -42,9 +42,22 @@ def mock_openai_service():
 
 class TestDatabaseIntegration:
     """Integration tests with real database."""
+    @staticmethod
+    def _ensure_user(user_id: int):
+        """Create a user row if not exists (minimal schema)."""
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+        settings = get_settings()
+        conn = psycopg2.connect(cursor_factory=RealDictCursor, **settings.db_config)
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute("INSERT INTO users (id, username) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING;", (user_id, f"user_{user_id}"))
+        finally:
+            conn.close()
     
     def test_question_repository_create_and_retrieve(self, test_db):
         """Test QuestionRepository with real PostgreSQL database."""
+        self._ensure_user(123)
         # Create a question
         question_id = QuestionRepository.create_question(
             user_id=123,
@@ -73,6 +86,8 @@ class TestDatabaseIntegration:
     
     def test_multiple_users_isolation(self, test_db):
         """Test that different users' data is properly isolated."""
+        self._ensure_user(100)
+        self._ensure_user(200)
         # Create questions for different users
         q1_id = QuestionRepository.create_question(user_id=100, question="User 100 question")
         q2_id = QuestionRepository.create_question(user_id=200, question="User 200 question")
@@ -95,6 +110,7 @@ class TestDatabaseIntegration:
     def test_pagination_limits(self, test_db):
         """Test that pagination works correctly."""
         user_id = 999
+        self._ensure_user(user_id)
         
         # Create multiple questions
         question_ids = []
@@ -124,6 +140,8 @@ class TestAPIIntegration:
         mock_openai_service.return_value = "This verse demonstrates God's incredible love for humanity."
         
         # Submit question via API
+        # Ensure user exists for FK
+        TestDatabaseIntegration._ensure_user(456)
         response = client.post("/api/ask", json={
             "question": "What is the significance of John 3:16?",
             "user_id": 456
@@ -166,6 +184,7 @@ class TestAPIIntegration:
     def test_history_endpoint_pagination(self, test_db, client, mock_openai_service):
         """Test history endpoint with real database pagination."""
         user_id = 789
+        TestDatabaseIntegration._ensure_user(user_id)
         
         # Configure the mock
         mock_openai_service.return_value = "Test answer"
@@ -194,6 +213,7 @@ class TestAPIIntegration:
         # Configure mock to raise an exception
         mock_openai_service.side_effect = Exception("OpenAI API Error")
         
+        TestDatabaseIntegration._ensure_user(999)
         response = client.post("/api/ask", json={
             "question": "This will fail",
             "user_id": 999

@@ -63,12 +63,16 @@ class QuestionRepository:
         """Get recent questions for a user."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT q.id, q.question, q.asked_at, a.answer
+                # Use asked_at column from questions, alias to created_at for API schema compatibility
+                cur.execute(
+                    """
+                    SELECT q.id, q.question, q.asked_at AS created_at, a.answer
                     FROM questions q
                     LEFT JOIN answers a ON q.id = a.question_id
                     WHERE q.user_id = %s
                     ORDER BY q.asked_at DESC
                     LIMIT %s
-                """, (user_id, limit))
+                    """,
+                    (user_id, limit)
+                )
                 return cur.fetchall()

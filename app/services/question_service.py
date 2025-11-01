@@ -44,7 +44,7 @@ class QuestionService:
                     id=item["id"],
                     question=item["question"],
                     answer=item["answer"],
-                    created_at=item["asked_at"]
+                    created_at=item["created_at"]
                 )
                 for item in history_data
             ]

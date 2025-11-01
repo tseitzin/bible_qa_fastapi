@@ -10,8 +10,8 @@ class TestOpenAIService:
     """Test cases for OpenAIService."""
     
     def setup_method(self):
-        """Set up test fixtures."""
-        with patch('app.services.openai_service.get_settings') as mock_settings:
+        """Set up test fixtures by patching config get_settings at source."""
+        with patch('app.config.get_settings') as mock_settings:
             mock_settings.return_value.openai_api_key = "test-api-key"
             mock_settings.return_value.openai_model = "gpt-3.5-turbo"
             self.service = OpenAIService()
@@ -155,7 +155,7 @@ class TestOpenAIService:
 @pytest.fixture
 def openai_service():
     """Create an OpenAIService instance for testing."""
-    with patch('app.services.openai_service.get_settings') as mock_settings:
+    with patch('app.config.get_settings') as mock_settings:
         mock_settings.return_value.openai_api_key = "test-key"
         mock_settings.return_value.openai_model = "gpt-3.5-turbo"
         return OpenAIService()

@@ -124,13 +124,13 @@ class TestQuestionService:
                 "id": 1,
                 "question": "What is love?",
                 "answer": "God is love.",
-                "asked_at": datetime(2025, 7, 31, 12, 0, 0)
+                "created_at": datetime(2025, 7, 31, 12, 0, 0)
             },
             {
                 "id": 2,
                 "question": "What is faith?",
                 "answer": "Faith is believing.",
-                "asked_at": datetime(2025, 7, 31, 11, 0, 0)
+                "created_at": datetime(2025, 7, 31, 11, 0, 0)
             }
         ]
         mock_repo.get_question_history.return_value = mock_history_data
