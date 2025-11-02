@@ -38,6 +38,8 @@ async def register(user_data: UserCreate):
         logger.info(f"New user registered: {user['email']}")
         return user
     
+    except HTTPException:
+        raise
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
