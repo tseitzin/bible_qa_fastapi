@@ -1,7 +1,7 @@
 """Pydantic models for request/response schemas."""
 from datetime import datetime
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, List
 
 
 class QuestionRequest(BaseModel):
@@ -35,3 +35,55 @@ class HealthCheck(BaseModel):
     status: str
     timestamp: datetime
     version: str = "1.0.0"
+
+
+# Authentication Schemas
+class UserCreate(BaseModel):
+    """Request model for user registration."""
+    email: EmailStr = Field(..., description="User's email address")
+    username: str = Field(..., min_length=3, max_length=50, description="Username")
+    password: str = Field(..., min_length=8, max_length=100, description="Password")
+
+
+class UserLogin(BaseModel):
+    """Request model for user login."""
+    email: EmailStr = Field(..., description="User's email address")
+    password: str = Field(..., description="Password")
+
+
+class Token(BaseModel):
+    """Response model for authentication token."""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class User(BaseModel):
+    """Response model for user data."""
+    id: int
+    email: str
+    username: str
+    is_active: bool
+    created_at: datetime
+
+
+# Saved Answers Schemas
+class SavedAnswerCreate(BaseModel):
+    """Request model for saving an answer."""
+    question_id: int = Field(..., description="ID of the question to save")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+
+
+class SavedAnswerResponse(BaseModel):
+    """Response model for a saved answer."""
+    id: int
+    question_id: int
+    question: str
+    answer: str
+    tags: List[str]
+    saved_at: datetime
+
+
+class SavedAnswersListResponse(BaseModel):
+    """Response model for list of saved answers."""
+    saved_answers: List[SavedAnswerResponse]
+    total: int

@@ -22,8 +22,14 @@ class Settings(BaseSettings):
     db_port: int = Field(default=5432, env="DB_PORT")
     
     # OpenAI Configuration
-    openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-3.5-turbo", env="OPENAI_MODEL")
+    
+    # Authentication Configuration
+    secret_key: str = Field(
+        default="your-secret-key-change-this-in-production-use-openssl-rand-hex-32",
+        env="SECRET_KEY"
+    )
     
     # CORS Configuration
     allowed_origins_str: str = Field(

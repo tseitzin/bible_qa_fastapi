@@ -13,9 +13,27 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Optionally override URL via env var
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    config.set_main_option("sqlalchemy.url", DATABASE_URL)
+db_user = os.getenv("DB_USER", "user")
+db_password = os.getenv("DB_PASSWORD")
+db_host = os.getenv("DB_HOST")
+db_port = os.getenv("DB_PORT")
+db_name = os.getenv("DB_NAME")
+
+if db_user and db_password and db_name:
+    db_url_parts = [f"postgresql://{db_user}:{db_password}"]
+    db_host_port = ""
+    if db_host:
+        db_host_port += db_host
+    if db_port:
+        db_host_port += f":{db_port}"
+    if db_host_port:
+        db_url_parts.append(f"@{db_host_port}")
+    db_url_parts.append(f"/{db_name}")
+    
+    sqlalchemy_url = "".join(db_url_parts)
+    config.set_main_option("sqlalchemy.url", sqlalchemy_url)
+elif os.getenv("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 # Add your model's MetaData object here for 'autogenerate'
 # support. We are using raw SQL migrations, so keep empty.
@@ -30,7 +48,7 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    connectable = create_engine(config.get_main_option("sqlalchemy.url"))
+    connectable = create_engine(config.get_main_option("sqlalchemy.url"), future=True)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)

@@ -1,6 +1,6 @@
 """Bible Q&A FastAPI Application."""
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
@@ -12,6 +12,8 @@ from app.models.schemas import (
 )
 from app.services.question_service import QuestionService
 from app.utils.exceptions import DatabaseError, OpenAIError
+from app.auth import get_current_user, get_current_user_optional
+from app.routers import auth, saved_answers
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +44,10 @@ app.add_middleware(
 # Initialize services
 question_service = QuestionService()
 
+# Include routers
+app.include_router(auth.router)
+app.include_router(saved_answers.router)
+
 
 @app.get("/", response_model=HealthCheck)
 async def health_check():
@@ -53,9 +59,18 @@ async def health_check():
 
 
 @app.post("/api/ask", response_model=QuestionResponse)
-async def ask_question(request: QuestionRequest):
-    """Submit a Bible-related question and get an AI-generated answer."""
+async def ask_question(
+    request: QuestionRequest,
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """Submit a Bible-related question and get an AI-generated answer (guest or authenticated)."""
     try:
+        # Use authenticated user's ID if logged in, otherwise use default guest ID
+        if current_user:
+            request.user_id = current_user["id"]
+        else:
+            request.user_id = 1  # Guest user ID
+        
         result = await question_service.process_question(request)
         return result
     except (DatabaseError, OpenAIError):
@@ -66,14 +81,17 @@ async def ask_question(request: QuestionRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/api/history/{user_id}", response_model=HistoryResponse)
-async def get_question_history(user_id: int, limit: int = 10):
-    """Get question history for a user."""
+@app.get("/api/history", response_model=HistoryResponse)
+async def get_question_history(
+    limit: int = 10,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get question history for authenticated user."""
     try:
         if limit > 100:
             limit = 100  # Reasonable limit
         
-        history = question_service.get_user_history(user_id, limit)
+        history = question_service.get_user_history(current_user["id"], limit)
         return history
     except (DatabaseError, OpenAIError):
         # Let custom error handlers handle these
