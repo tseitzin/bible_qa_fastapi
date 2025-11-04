@@ -10,6 +10,20 @@ class QuestionRequest(BaseModel):
     user_id: int = Field(default=1, description="User ID (placeholder for future auth)")
 
 
+class ConversationMessage(BaseModel):
+    """Model for a single message in conversation history."""
+    role: str = Field(..., description="Message role: 'user' or 'assistant'")
+    content: str = Field(..., description="Message content")
+
+
+class FollowUpQuestionRequest(BaseModel):
+    """Request model for follow-up questions."""
+    question: str = Field(..., min_length=1, max_length=1000, description="The follow-up question")
+    conversation_history: List[ConversationMessage] = Field(default_factory=list, description="Previous conversation context")
+    user_id: int = Field(default=1, description="User ID")
+    parent_question_id: Optional[int] = Field(None, description="ID of the original question this follows up on")
+
+
 class QuestionResponse(BaseModel):
     """Response model for question answers."""
     answer: str = Field(..., description="The AI-generated answer")
@@ -73,6 +87,16 @@ class SavedAnswerCreate(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
 
 
+class ThreadItem(BaseModel):
+    """Model for a single item in a conversation thread."""
+    id: int
+    question: str
+    answer: Optional[str]
+    parent_question_id: Optional[int]
+    asked_at: datetime
+    depth: int
+
+
 class SavedAnswerResponse(BaseModel):
     """Response model for a saved answer."""
     id: int
@@ -81,6 +105,11 @@ class SavedAnswerResponse(BaseModel):
     answer: str
     tags: List[str]
     saved_at: datetime
+    parent_question_id: Optional[int] = None
+    conversation_thread: List[ThreadItem] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True
 
 
 class SavedAnswersListResponse(BaseModel):

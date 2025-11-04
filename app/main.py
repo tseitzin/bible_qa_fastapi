@@ -7,7 +7,7 @@ import logging
 
 from app.config import get_settings
 from app.models.schemas import (
-    QuestionRequest, QuestionResponse, 
+    QuestionRequest, QuestionResponse, FollowUpQuestionRequest,
     HistoryResponse, HealthCheck
 )
 from app.services.question_service import QuestionService
@@ -78,6 +78,29 @@ async def ask_question(
         raise
     except Exception as e:
         logger.error(f"Error processing question: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/ask/followup", response_model=QuestionResponse)
+async def ask_followup_question(
+    request: FollowUpQuestionRequest,
+    current_user: dict = Depends(get_current_user_optional)
+):
+    """Submit a follow-up question with conversation context."""
+    try:
+        # Use authenticated user's ID if logged in, otherwise use default guest ID
+        if current_user:
+            request.user_id = current_user["id"]
+        else:
+            request.user_id = 1  # Guest user ID
+        
+        result = await question_service.process_followup_question(request)
+        return result
+    except (DatabaseError, OpenAIError):
+        # Let custom error handlers handle these
+        raise
+    except Exception as e:
+        logger.error(f"Error processing follow-up question: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

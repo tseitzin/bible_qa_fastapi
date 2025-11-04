@@ -35,13 +35,13 @@ class QuestionRepository:
     """Repository for question-related database operations."""
     
     @staticmethod
-    def create_question(user_id: int, question: str) -> int:
+    def create_question(user_id: int, question: str, parent_question_id: int = None) -> int:
         """Create a new question and return its ID."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO questions (user_id, question) VALUES (%s, %s) RETURNING id;",
-                    (user_id, question)
+                    "INSERT INTO questions (user_id, question, parent_question_id) VALUES (%s, %s, %s) RETURNING id;",
+                    (user_id, question, parent_question_id)
                 )
                 question_id = cur.fetchone()["id"]
                 conn.commit()
@@ -76,6 +76,67 @@ class QuestionRepository:
                     (user_id, limit)
                 )
                 return cur.fetchall()
+    
+    @staticmethod
+    def get_root_question_id(question_id: int) -> int:
+        """Get the root question ID for a given question (follows parent chain to root)."""
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    WITH RECURSIVE root_finder AS (
+                        -- Start with the given question
+                        SELECT id, parent_question_id
+                        FROM questions
+                        WHERE id = %s
+                        
+                        UNION ALL
+                        
+                        -- Follow parent chain
+                        SELECT q.id, q.parent_question_id
+                        FROM questions q
+                        JOIN root_finder rf ON q.id = rf.parent_question_id
+                    )
+                    SELECT id FROM root_finder WHERE parent_question_id IS NULL
+                    """,
+                    (question_id,)
+                )
+                result = cur.fetchone()
+                return result['id'] if result else question_id
+    
+    @staticmethod
+    def get_conversation_thread(question_id: int) -> list:
+        """Get the full conversation thread for a question (root + all follow-ups)."""
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Use recursive CTE to get entire conversation thread
+                # Starting from the given question_id (which should be the root),
+                # find all questions that have this as their parent
+                cur.execute(
+                    """
+                    WITH RECURSIVE thread AS (
+                        -- Base: start with the root question (the one with no parent or the given ID)
+                        SELECT q.id, q.question, q.parent_question_id, q.asked_at, a.answer, 0 as depth
+                        FROM questions q
+                        LEFT JOIN answers a ON q.id = a.question_id
+                        WHERE q.id = %s AND q.parent_question_id IS NULL
+                        
+                        UNION ALL
+                        
+                        -- Recursive: get all follow-up questions that reference items in the thread
+                        SELECT q.id, q.question, q.parent_question_id, q.asked_at, a.answer, t.depth + 1
+                        FROM questions q
+                        JOIN thread t ON q.parent_question_id = t.id
+                        LEFT JOIN answers a ON q.id = a.question_id
+                    )
+                    SELECT id, question, parent_question_id, asked_at, answer, depth
+                    FROM thread
+                    ORDER BY depth, asked_at
+                    """,
+                    (question_id,)
+                )
+                result = cur.fetchall()
+                return result
 
 
 class SavedAnswersRepository:
@@ -83,9 +144,13 @@ class SavedAnswersRepository:
     
     @staticmethod
     def save_answer(user_id: int, question_id: int, tags: list) -> dict:
-        """Save an answer for a user."""
+        """Save an answer for a user, using root question ID for conversations."""
+        # Find the root question ID by following the parent chain
+        root_question_id = QuestionRepository.get_root_question_id(question_id)
+        
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Save using the root question ID
                 cur.execute(
                     """
                     INSERT INTO saved_answers (user_id, question_id, tags) 
@@ -94,7 +159,7 @@ class SavedAnswersRepository:
                     SET tags = EXCLUDED.tags, saved_at = CURRENT_TIMESTAMP
                     RETURNING id, user_id, question_id, tags, saved_at
                     """,
-                    (user_id, question_id, tags)
+                    (user_id, root_question_id, tags)
                 )
                 result = cur.fetchone()
                 conn.commit()
@@ -102,7 +167,7 @@ class SavedAnswersRepository:
     
     @staticmethod
     def get_user_saved_answers(user_id: int, limit: int = 100) -> list:
-        """Get all saved answers for a user with question and answer details."""
+        """Get all saved answers for a user with question and answer details, including conversation threads."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -113,7 +178,8 @@ class SavedAnswersRepository:
                         q.question,
                         a.answer,
                         sa.tags,
-                        sa.saved_at
+                        sa.saved_at,
+                        q.parent_question_id
                     FROM saved_answers sa
                     JOIN questions q ON sa.question_id = q.id
                     LEFT JOIN answers a ON q.id = a.question_id
@@ -123,7 +189,24 @@ class SavedAnswersRepository:
                     """,
                     (user_id, limit)
                 )
-                return cur.fetchall()
+                saved_answers = cur.fetchall()
+                
+                # For each saved answer, get the full conversation thread
+                result = []
+                for saved_answer in saved_answers:
+                    thread = QuestionRepository.get_conversation_thread(saved_answer['question_id'])
+                    result.append({
+                        'id': saved_answer['id'],
+                        'question_id': saved_answer['question_id'],
+                        'question': saved_answer['question'],
+                        'answer': saved_answer['answer'],
+                        'tags': saved_answer['tags'],
+                        'saved_at': saved_answer['saved_at'],
+                        'parent_question_id': saved_answer['parent_question_id'],
+                        'conversation_thread': thread
+                    })
+                
+                return result
     
     @staticmethod
     def delete_saved_answer(user_id: int, saved_answer_id: int) -> bool:
@@ -156,7 +239,7 @@ class SavedAnswersRepository:
     
     @staticmethod
     def search_saved_answers(user_id: int, query: str = None, tag: str = None) -> list:
-        """Search saved answers by query or tag."""
+        """Search saved answers by query or tag, including conversation threads."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 if tag:
@@ -168,7 +251,8 @@ class SavedAnswersRepository:
                             q.question,
                             a.answer,
                             sa.tags,
-                            sa.saved_at
+                            sa.saved_at,
+                            q.parent_question_id
                         FROM saved_answers sa
                         JOIN questions q ON sa.question_id = q.id
                         LEFT JOIN answers a ON q.id = a.question_id
@@ -187,7 +271,8 @@ class SavedAnswersRepository:
                             q.question,
                             a.answer,
                             sa.tags,
-                            sa.saved_at
+                            sa.saved_at,
+                            q.parent_question_id
                         FROM saved_answers sa
                         JOIN questions q ON sa.question_id = q.id
                         LEFT JOIN answers a ON q.id = a.question_id
@@ -200,4 +285,21 @@ class SavedAnswersRepository:
                 else:
                     return SavedAnswersRepository.get_user_saved_answers(user_id)
                 
-                return cur.fetchall()
+                saved_answers = cur.fetchall()
+                
+                # For each saved answer, get the full conversation thread
+                result = []
+                for saved_answer in saved_answers:
+                    thread = QuestionRepository.get_conversation_thread(saved_answer['question_id'])
+                    result.append({
+                        'id': saved_answer['id'],
+                        'question_id': saved_answer['question_id'],
+                        'question': saved_answer['question'],
+                        'answer': saved_answer['answer'],
+                        'tags': saved_answer['tags'],
+                        'saved_at': saved_answer['saved_at'],
+                        'parent_question_id': saved_answer['parent_question_id'],
+                        'conversation_thread': thread
+                    })
+                
+                return result
