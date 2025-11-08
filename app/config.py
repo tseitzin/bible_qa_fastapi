@@ -81,7 +81,6 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-@lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance."""
+    """Get settings instance."""
     return Settings()
