@@ -32,16 +32,15 @@ class Settings(BaseSettings):
     )
     
     # CORS Configuration
-    allowed_origins_str: str = Field(
-        default="http://localhost:5173,http://localhost:3000",
-        env="ALLOWED_ORIGINS"
-    )
-    
     @computed_field
     @property
     def allowed_origins(self) -> list[str]:
-        """Parse allowed origins from comma-separated string."""
-        return [origin.strip() for origin in self.allowed_origins_str.split(",")]
+        """Parse allowed origins from environment variable or use defaults."""
+        allowed_origins_str = os.getenv(
+            "ALLOWED_ORIGINS",
+            "http://localhost:5173,http://localhost:3000"
+        )
+        return [origin.strip() for origin in allowed_origins_str.split(",")]
     
     @property
     def db_config(self) -> dict:
@@ -76,6 +75,7 @@ class Settings(BaseSettings):
             }
     
     model_config = SettingsConfigDict(
+        env_file=None,  # Don't load from .env file
         case_sensitive=False,
         extra="ignore"
     )
