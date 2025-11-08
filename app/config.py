@@ -38,7 +38,6 @@ class Settings(BaseSettings):
     )
     
     @computed_field
-    @computed_field
     @property
     def allowed_origins(self) -> list[str]:
         """Parse allowed origins from comma-separated string."""
@@ -77,7 +76,7 @@ class Settings(BaseSettings):
             }
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=".env" if not os.getenv("DYNO") else None,  # Skip .env on Heroku
         case_sensitive=False,
         extra="ignore"
     )
