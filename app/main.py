@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Log CORS configuration for debugging
+import os
+logger.info(f"ENV ALLOWED_ORIGINS: {os.getenv('ALLOWED_ORIGINS')}")
+logger.info(f"Settings allowed_origins_str: {settings.allowed_origins_str}")
 logger.info(f"CORS allowed origins: {settings.allowed_origins}")
 # Initialize FastAPI app
 app = FastAPI(
