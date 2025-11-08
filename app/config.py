@@ -76,7 +76,6 @@ class Settings(BaseSettings):
             }
     
     model_config = SettingsConfigDict(
-        env_file=".env" if not os.getenv("DYNO") else None,  # Skip .env on Heroku
         case_sensitive=False,
         extra="ignore"
     )
