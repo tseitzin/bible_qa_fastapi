@@ -33,7 +33,11 @@ if db_user and db_password and db_name:
     sqlalchemy_url = "".join(db_url_parts)
     config.set_main_option("sqlalchemy.url", sqlalchemy_url)
 elif os.getenv("DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
+    # Heroku uses postgres:// but SQLAlchemy requires postgresql://
+    database_url = os.getenv("DATABASE_URL")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # Add your model's MetaData object here for 'autogenerate'
 # support. We are using raw SQL migrations, so keep empty.
