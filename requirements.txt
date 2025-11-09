@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-openai
+openai>=2.7.1
 psycopg2-binary
 python-dotenv
 gunicorn
