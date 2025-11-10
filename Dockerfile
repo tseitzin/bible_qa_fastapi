@@ -17,7 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY tests ./tests
 COPY scripts ./scripts
-COPY kjv.xlsx ./kjv.xlsx
 COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
 COPY start.sh ./start.sh
