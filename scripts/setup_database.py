@@ -62,10 +62,21 @@ def create_tables(conn_params):
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- Create bible verses table
+            CREATE TABLE IF NOT EXISTS bible_verses (
+                id SERIAL PRIMARY KEY,
+                book VARCHAR(50) NOT NULL,
+                chapter INTEGER NOT NULL,
+                verse INTEGER NOT NULL,
+                text TEXT NOT NULL
+            );
+
             -- Create indexes for better performance
             CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id);
             CREATE INDEX IF NOT EXISTS idx_questions_asked_at ON questions(asked_at);
             CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_bible_verses_book_chapter_verse
+                ON bible_verses (book, chapter, verse);
         """)
         
         conn.commit()

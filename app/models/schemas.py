@@ -30,6 +30,15 @@ class QuestionResponse(BaseModel):
     question_id: int = Field(..., description="The ID of the stored question")
 
 
+class BibleVerseResponse(BaseModel):
+    """Response model for Bible verse lookups."""
+    reference: str = Field(..., description="Full verse reference, e.g. 'John 3:16'")
+    book: str = Field(..., description="Book name")
+    chapter: int = Field(..., ge=1, description="Chapter number")
+    verse: int = Field(..., ge=1, description="Verse number")
+    text: str = Field(..., description="Verse text")
+
+
 class HistoryItem(BaseModel):
     """Model for question history items."""
     id: int
