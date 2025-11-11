@@ -44,7 +44,7 @@ class Settings(BaseSettings):
         """Parse allowed origins from environment variable or use defaults."""
         allowed_origins_str = os.getenv(
             "ALLOWED_ORIGINS",
-            "http://localhost:5173,http://localhost:3000"
+            "https://www.wordoflifeanswers.com,http://localhost:5173,http://localhost:3000"
         )
         return [origin.strip() for origin in allowed_origins_str.split(",")]
     
