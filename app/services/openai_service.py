@@ -41,6 +41,8 @@ class OpenAIService:
         self.max_output_tokens = max(1, settings.openai_max_output_tokens)
         self.retry_max_output_tokens = max(self.max_output_tokens + 1, settings.openai_max_output_tokens_retry)
         self.retry_on_truncation = settings.openai_retry_on_truncation
+        self.request_timeout = max(0, settings.openai_request_timeout)
+        self.max_history_messages = max(0, settings.openai_max_history_messages)
 
         effort = (settings.openai_reasoning_effort or "").strip().lower()
         self.reasoning_effort = effort if effort in {"none", "low", "medium", "high"} else "low"
@@ -55,7 +57,11 @@ class OpenAIService:
         messages = [self._build_message("system", SYSTEM_PROMPT)]
 
         if conversation_history:
-            messages.extend(self._normalize_history(conversation_history))
+            history_source = conversation_history
+            if self.max_history_messages > 0 and len(conversation_history) > self.max_history_messages:
+                history_source = conversation_history[-self.max_history_messages :]
+
+            messages.extend(self._normalize_history(history_source))
 
         messages.append(self._build_message("user", question))
 
@@ -81,6 +87,10 @@ class OpenAIService:
 
             return answer
 
+        except asyncio.TimeoutError as exc:
+            timeout_label = f"{self.request_timeout} seconds" if self.request_timeout else "the configured deadline"
+            logger.error("OpenAI request timed out after %s", timeout_label)
+            raise OpenAIError("AI service timed out") from exc
         except (BadRequestError, RateLimitError, APITimeoutError, APIConnectionError, APIError) as exc:
             logger.error("OpenAI API error: %s", exc)
             raise OpenAIError("AI service unavailable") from exc
@@ -150,7 +160,10 @@ class OpenAIService:
         if self.reasoning_effort and self.reasoning_effort != "none":
             kwargs["reasoning"] = {"effort": self.reasoning_effort}
 
-        return await asyncio.to_thread(self.client.responses.create, **kwargs)
+        task = asyncio.to_thread(self.client.responses.create, **kwargs)
+        if self.request_timeout > 0:
+            return await asyncio.wait_for(task, timeout=self.request_timeout)
+        return await task
 
     def _is_truncated(self, response: Any) -> bool:
         """Determine whether the response ended due to token limits."""
