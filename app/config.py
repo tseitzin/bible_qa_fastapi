@@ -44,9 +44,20 @@ class Settings(BaseSettings):
         """Parse allowed origins from environment variable or use defaults."""
         allowed_origins_str = os.getenv(
             "ALLOWED_ORIGINS",
-            "https://www.wordoflifeanswers.com,http://localhost:5173,http://localhost:3000"
+            "https://www.wordoflifeanswers.com,https://wordoflifeanswers.com,http://localhost:5173,http://localhost:3000"
         )
-        return [origin.strip() for origin in allowed_origins_str.split(",")]
+        origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+
+        # Automatically add bare/WWW variants when a domain is provided to reduce misconfiguration risk
+        normalized = set(origins)
+        for origin in list(origins):
+            if origin.startswith("https://www."):
+                normalized.add(origin.replace("https://www.", "https://", 1))
+            elif origin.startswith("https://") and not origin.split("//", 1)[1].startswith("www."):
+                host = origin.split("//", 1)[1]
+                normalized.add(f"https://www.{host}")
+
+        return sorted(normalized)
     
     @property
     def db_config(self) -> dict:
