@@ -1,6 +1,6 @@
 """Business logic for question handling."""
 from app.services.openai_service import OpenAIService
-from app.database import QuestionRepository
+from app.database import QuestionRepository, RecentQuestionsRepository
 from app.models.schemas import (
     QuestionRequest, QuestionResponse, FollowUpQuestionRequest,
     HistoryResponse, HistoryItem
@@ -17,7 +17,7 @@ class QuestionService:
         self.openai_service = OpenAIService()
         self.question_repo = QuestionRepository()
     
-    async def process_question(self, request: QuestionRequest) -> QuestionResponse:
+    async def process_question(self, request: QuestionRequest, record_recent: bool = False) -> QuestionResponse:
         """Process a question through the complete pipeline."""
         try:
             # Get AI answer
@@ -30,6 +30,9 @@ class QuestionService:
             )
             
             self.question_repo.create_answer(question_id, answer)
+
+            if record_recent:
+                RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
             
             return QuestionResponse(answer=answer, question_id=question_id)
             
@@ -37,7 +40,7 @@ class QuestionService:
             logger.error(f"Error processing question: {e}")
             raise
     
-    async def process_followup_question(self, request: FollowUpQuestionRequest) -> QuestionResponse:
+    async def process_followup_question(self, request: FollowUpQuestionRequest, record_recent: bool = False) -> QuestionResponse:
         """Process a follow-up question with conversation context."""
         try:
             # Convert conversation history to OpenAI format
@@ -60,6 +63,9 @@ class QuestionService:
             )
             
             self.question_repo.create_answer(question_id, answer)
+
+            if record_recent:
+                RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
             
             return QuestionResponse(answer=answer, question_id=question_id)
             

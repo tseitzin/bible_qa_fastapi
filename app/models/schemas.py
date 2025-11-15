@@ -53,6 +53,23 @@ class HistoryResponse(BaseModel):
     total: int
 
 
+class RecentQuestionCreate(BaseModel):
+    """Request model for manually recording a recent question."""
+    question: str = Field(..., min_length=1, max_length=1000, description="Question text")
+
+
+class RecentQuestionItem(BaseModel):
+    """Response model for a single recent question entry."""
+    id: int
+    question: str
+    asked_at: datetime
+
+
+class RecentQuestionsResponse(BaseModel):
+    """Response model wrapping recent questions list."""
+    recent_questions: List[RecentQuestionItem]
+
+
 class HealthCheck(BaseModel):
     """Health check response model."""
     status: str

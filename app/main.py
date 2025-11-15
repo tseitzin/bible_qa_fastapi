@@ -13,7 +13,7 @@ from app.models.schemas import (
 from app.services.question_service import QuestionService
 from app.utils.exceptions import DatabaseError, OpenAIError
 from app.auth import get_current_user, get_current_user_optional
-from app.routers import auth, saved_answers, bible
+from app.routers import auth, saved_answers, bible, recent_questions
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +48,7 @@ question_service = QuestionService()
 app.include_router(auth.router)
 app.include_router(saved_answers.router)
 app.include_router(bible.router)
+app.include_router(recent_questions.router)
 
 
 @app.get("/", response_model=HealthCheck)
@@ -72,7 +73,10 @@ async def ask_question(
         else:
             request.user_id = 1  # Guest user ID
         
-        result = await question_service.process_question(request)
+        result = await question_service.process_question(
+            request,
+            record_recent=bool(current_user)
+        )
         return result
     except (DatabaseError, OpenAIError):
         # Let custom error handlers handle these
@@ -95,7 +99,10 @@ async def ask_followup_question(
         else:
             request.user_id = 1  # Guest user ID
         
-        result = await question_service.process_followup_question(request)
+        result = await question_service.process_followup_question(
+            request,
+            record_recent=bool(current_user)
+        )
         return result
     except (DatabaseError, OpenAIError):
         # Let custom error handlers handle these
