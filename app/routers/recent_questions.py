@@ -44,3 +44,21 @@ async def add_recent_question(
         for item in records
     ]
     return RecentQuestionsResponse(recent_questions=recent_questions)
+
+
+@router.delete("/{recent_question_id}", response_model=RecentQuestionsResponse, status_code=status.HTTP_200_OK)
+async def delete_recent_question(
+    recent_question_id: int,
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove a specific recent question for the authenticated user and return the updated list."""
+    deleted = RecentQuestionsRepository.delete_recent_question(current_user["id"], recent_question_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Recent question not found.")
+
+    records = RecentQuestionsRepository.get_recent_questions(current_user["id"])
+    recent_questions = [
+        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"])
+        for item in records
+    ]
+    return RecentQuestionsResponse(recent_questions=recent_questions)

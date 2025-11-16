@@ -381,3 +381,19 @@ class RecentQuestionsRepository:
                     (user_id,)
                 )
                 conn.commit()
+
+    @staticmethod
+    def delete_recent_question(user_id: int, recent_question_id: int) -> bool:
+        """Delete a single recent question entry for the user."""
+        if not user_id or not recent_question_id:
+            return False
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM recent_questions WHERE id = %s AND user_id = %s;",
+                    (recent_question_id, user_id)
+                )
+                deleted = cur.rowcount > 0
+                conn.commit()
+                return deleted
