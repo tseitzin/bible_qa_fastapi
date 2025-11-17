@@ -28,6 +28,7 @@ class QuestionResponse(BaseModel):
     """Response model for question answers."""
     answer: str = Field(..., description="The AI-generated answer")
     question_id: int = Field(..., description="The ID of the stored question")
+    is_biblical: bool = Field(..., description="Whether the AI response is considered biblical")
 
 
 class BibleVerseResponse(BaseModel):

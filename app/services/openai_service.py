@@ -19,13 +19,20 @@ from app.utils.exceptions import OpenAIError
 logger = logging.getLogger(__name__)
 
 
+NON_BIBLICAL_RESPONSE = (
+    "This app is only for researching and asking questions about God's word. "
+    "Please ask a Bible-related question."
+)
+
 SYSTEM_PROMPT = (
     "You are a helpful Bible scholar with deep knowledge of Christian theology, "
     "biblical history, and scriptural interpretation. Provide thoughtful, accurate, "
     "and biblically-grounded answers. When appropriate, include relevant scripture "
     "references. Be respectful of different denominational perspectives. "
     "When answering follow-up questions, maintain context from the previous conversation "
-    "and provide deeper insights or additional details as requested."
+    "and provide deeper insights or additional details as requested. "
+    "Only answer questions that clearly relate to the Bible or Christian faith. "
+    f"If a user asks about something unrelated to God's word, respond with: '{NON_BIBLICAL_RESPONSE}'"
 )
 
 
@@ -196,3 +203,18 @@ class OpenAIService:
                 return dumped.get(key)
 
         return None
+
+    def is_biblical_answer(self, answer: Optional[str]) -> bool:
+        """Determine if an AI answer reflects a Bible-related response."""
+
+        if not answer:
+            return False
+
+        normalized = answer.strip()
+        if not normalized:
+            return False
+
+        if NON_BIBLICAL_RESPONSE.lower() in normalized.lower():
+            return False
+
+        return True

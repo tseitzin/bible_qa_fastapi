@@ -3,7 +3,9 @@ import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
+from fastapi import HTTPException
 from jose import jwt
+from jose import JWTError
 
 from app.main import app
 from app.auth import (
@@ -75,9 +77,13 @@ class TestUserRegistration:
         # Mock database connection
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+        mock_conn.cursor.return_value = mock_cursor
+
         mock_get_db.return_value.__enter__.return_value = mock_conn
-        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-        
+        mock_get_db.return_value.__exit__.return_value = None
+
         # Mock database return
         mock_cursor.fetchone.return_value = {
             'id': 1,
@@ -86,9 +92,8 @@ class TestUserRegistration:
             'is_active': True,
             'created_at': datetime.utcnow()
         }
-        
-        # Create user
-        user = auth_create_user('test@example.com', 'testuser', 'plain_password')
+
+        auth_create_user('test@example.com', 'testuser', 'plain_password')
         
         # Verify password was hashed
         mock_get_hash.assert_called_once_with('plain_password')
@@ -587,3 +592,131 @@ class TestPasswordHashing:
         # Both should verify correctly
         assert verify_password(plain_password, hash1) is True
         assert verify_password(plain_password, hash2) is True
+
+
+class TestAuthUtilities:
+    """Additional tests covering auth helper functions."""
+
+    @patch('app.auth.get_db_connection')
+    def test_get_user_by_email(self, mock_get_db):
+        from app.auth import get_user_by_email
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'email': 'test@example.com',
+            'username': 'tester',
+            'hashed_password': 'hashed',
+            'is_active': True,
+            'created_at': datetime.utcnow()
+        }
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_get_db.return_value.__enter__.return_value = mock_conn
+        mock_get_db.return_value.__exit__.return_value = None
+
+        result = get_user_by_email('test@example.com')
+        assert result['email'] == 'test@example.com'
+
+    @patch('app.auth.get_db_connection')
+    def test_get_user_by_id(self, mock_get_db):
+        from app.auth import get_user_by_id
+
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {
+            'id': 2,
+            'email': 'user@example.com',
+            'username': 'user',
+            'is_active': True,
+            'created_at': datetime.utcnow()
+        }
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.__exit__.return_value = None
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_get_db.return_value.__enter__.return_value = mock_conn
+        mock_get_db.return_value.__exit__.return_value = None
+
+        result = get_user_by_id(2)
+        assert result['id'] == 2
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', return_value={})
+    async def test_get_current_user_missing_sub_raises(self, mock_decode):
+        from app.auth import get_current_user
+
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token='token')
+        assert exc.value.status_code == 401
+        mock_decode.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', return_value={'sub': '1'})
+    @patch('app.auth.get_user_by_id', return_value=None)
+    async def test_get_current_user_missing_user_raises(self, mock_get_user_by_id, mock_decode):
+        from app.auth import get_current_user
+
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token='token')
+        assert exc.value.status_code == 401
+        mock_get_user_by_id.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', return_value={'sub': '1'})
+    @patch('app.auth.get_user_by_id', return_value={'id': 1, 'is_active': False})
+    async def test_get_current_user_inactive(self, mock_get_user_by_id, mock_decode):
+        from app.auth import get_current_user
+
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(token='token')
+        assert exc.value.status_code == 400
+        mock_get_user_by_id.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_get_current_active_user_inactive(self):
+        from app.auth import get_current_active_user
+
+        with pytest.raises(HTTPException) as exc:
+            await get_current_active_user(current_user={'is_active': False})
+        assert exc.value.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_optional_no_token(self):
+        from app.auth import get_current_user_optional
+
+        result = await get_current_user_optional(token=None)
+        assert result is None
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', return_value={'sub': None})
+    async def test_get_current_user_optional_missing_sub(self, mock_decode):
+        from app.auth import get_current_user_optional
+
+        result = await get_current_user_optional(token='token')
+        assert result is None
+        mock_decode.assert_called_once_with('token', SECRET_KEY, algorithms=[ALGORITHM])
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', side_effect=JWTError('bad token'))
+    async def test_get_current_user_optional_jwt_error(self, mock_decode):
+        from app.auth import get_current_user_optional
+
+        result = await get_current_user_optional(token='token')
+        assert result is None
+        mock_decode.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch('app.auth.jwt.decode', return_value={'sub': '1'})
+    @patch('app.auth.get_user_by_id', return_value={'id': 1, 'is_active': False})
+    async def test_get_current_user_optional_inactive(self, mock_get_user_by_id, mock_decode):
+        from app.auth import get_current_user_optional
+
+        result = await get_current_user_optional(token='token')
+        assert result is None
+        mock_get_user_by_id.assert_called_once_with(1)

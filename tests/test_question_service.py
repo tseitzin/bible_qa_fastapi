@@ -3,7 +3,15 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 from app.services.question_service import QuestionService
-from app.models.schemas import QuestionRequest, QuestionResponse, HistoryResponse, HistoryItem
+from app.services.openai_service import NON_BIBLICAL_RESPONSE
+from app.models.schemas import (
+    QuestionRequest,
+    QuestionResponse,
+    FollowUpQuestionRequest,
+    ConversationMessage,
+    HistoryResponse,
+    HistoryItem,
+)
 
 
 class TestQuestionService:
@@ -22,6 +30,7 @@ class TestQuestionService:
         mock_openai.get_bible_answer = AsyncMock(
             return_value="Faith is the substance of things hoped for, the evidence of things not seen."
         )
+        mock_openai.is_biblical_answer.return_value = True
         mock_openai_class.return_value = mock_openai
         
         # Mock repository
@@ -47,6 +56,7 @@ class TestQuestionService:
         assert isinstance(result, QuestionResponse)
         assert result.answer == "Faith is the substance of things hoped for, the evidence of things not seen."
         assert result.question_id == 123
+        assert result.is_biblical is True
         
         # Verify service calls
         mock_openai.get_bible_answer.assert_called_once_with("What is faith?")
@@ -113,6 +123,153 @@ class TestQuestionService:
         # Should propagate the exception
         with pytest.raises(Exception, match="Database connection failed"):
             await service.process_question(request)
+
+    @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
+    @patch('app.services.question_service.OpenAIService')
+    @patch('app.services.question_service.QuestionRepository')
+    async def test_process_question_records_recent_when_enabled(
+        self,
+        mock_repo_class,
+        mock_openai_class,
+        mock_add_recent,
+    ):
+        """Record_recent flag triggers recent questions repository update."""
+
+        mock_openai = Mock()
+        mock_openai.get_bible_answer = AsyncMock(return_value="Answer")
+        mock_openai.is_biblical_answer.return_value = True
+        mock_openai_class.return_value = mock_openai
+
+        mock_repo = Mock()
+        mock_repo.create_question.return_value = 55
+        mock_repo_class.return_value = mock_repo
+
+        service = QuestionService()
+        service.openai_service = mock_openai
+        service.question_repo = mock_repo
+
+        request = QuestionRequest(question="Tracked question", user_id=7)
+
+        result = await service.process_question(request, record_recent=True)
+
+        assert result.question_id == 55
+        assert result.is_biblical is True
+        mock_add_recent.assert_called_once_with(7, "Tracked question")
+
+    @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
+    @patch('app.services.question_service.OpenAIService')
+    @patch('app.services.question_service.QuestionRepository')
+    async def test_process_question_skips_recent_for_non_biblical(
+        self,
+        mock_repo_class,
+        mock_openai_class,
+        mock_add_recent,
+    ):
+        """Refusal responses are not recorded as recent questions."""
+
+        mock_openai = Mock()
+        mock_openai.get_bible_answer = AsyncMock(return_value=NON_BIBLICAL_RESPONSE)
+        mock_openai.is_biblical_answer.return_value = False
+        mock_openai_class.return_value = mock_openai
+
+        mock_repo = Mock()
+        mock_repo.create_question.return_value = 44
+        mock_repo_class.return_value = mock_repo
+
+        service = QuestionService()
+        service.openai_service = mock_openai
+        service.question_repo = mock_repo
+
+        request = QuestionRequest(question="Tell me about space travel", user_id=3)
+
+        result = await service.process_question(request, record_recent=True)
+
+        assert result.question_id == 44
+        assert result.is_biblical is False
+        mock_add_recent.assert_not_called()
+
+    @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
+    @patch('app.services.question_service.OpenAIService')
+    @patch('app.services.question_service.QuestionRepository')
+    async def test_process_followup_question_success(self, mock_repo_class, mock_openai_class, mock_add_recent):
+        """Test processing a follow-up question with conversation history."""
+        mock_openai = Mock()
+        mock_openai.get_bible_answer = AsyncMock(return_value="Detailed follow-up answer")
+        mock_openai.is_biblical_answer.return_value = True
+        mock_openai_class.return_value = mock_openai
+
+        mock_repo = Mock()
+        mock_repo.create_question.return_value = 321
+        mock_repo.create_answer.return_value = None
+        mock_repo_class.return_value = mock_repo
+
+        service = QuestionService()
+        service.openai_service = mock_openai
+        service.question_repo = mock_repo
+
+        request = FollowUpQuestionRequest(
+            question="What happened after the Exodus?",
+            user_id=2,
+            parent_question_id=111,
+            conversation_history=[
+                ConversationMessage(role="user", content="Tell me about Moses."),
+                ConversationMessage(role="assistant", content="Moses led Israel out of Egypt."),
+            ]
+        )
+
+        result = await service.process_followup_question(request, record_recent=True)
+
+        assert isinstance(result, QuestionResponse)
+        assert result.question_id == 321
+        assert result.is_biblical is True
+        mock_openai.get_bible_answer.assert_called_once()
+        called_args, called_kwargs = mock_openai.get_bible_answer.call_args
+        assert called_args[0] == "What happened after the Exodus?"
+        assert len(called_kwargs["conversation_history"]) == 2
+        mock_repo.create_question.assert_called_once_with(
+            user_id=2,
+            question="What happened after the Exodus?",
+            parent_question_id=111
+        )
+        mock_add_recent.assert_called_once_with(2, "What happened after the Exodus?")
+
+    @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
+    @patch('app.services.question_service.OpenAIService')
+    @patch('app.services.question_service.QuestionRepository')
+    async def test_process_followup_question_skips_non_biblical_recent(
+        self,
+        mock_repo_class,
+        mock_openai_class,
+        mock_add_recent,
+    ):
+        """Non-biblical follow-up responses are not tracked as recent."""
+
+        mock_openai = Mock()
+        mock_openai.get_bible_answer = AsyncMock(return_value=NON_BIBLICAL_RESPONSE)
+        mock_openai.is_biblical_answer.return_value = False
+        mock_openai_class.return_value = mock_openai
+
+        mock_repo = Mock()
+        mock_repo.create_question.return_value = 222
+        mock_repo.create_answer.return_value = None
+        mock_repo_class.return_value = mock_repo
+
+        service = QuestionService()
+        service.openai_service = mock_openai
+        service.question_repo = mock_repo
+
+        request = FollowUpQuestionRequest(
+            question="What should I cook tonight?",
+            user_id=5,
+            parent_question_id=101,
+            conversation_history=[],
+        )
+
+        result = await service.process_followup_question(request, record_recent=True)
+
+        assert result.question_id == 222
+        assert result.is_biblical is False
+        mock_add_recent.assert_not_called()
     
     @patch('app.services.question_service.QuestionRepository')
     def test_get_user_history_success(self, mock_repo_class):

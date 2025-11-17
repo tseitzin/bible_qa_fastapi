@@ -23,6 +23,8 @@ class QuestionService:
             # Get AI answer
             answer = await self.openai_service.get_bible_answer(request.question)
             
+            is_biblical = self.openai_service.is_biblical_answer(answer)
+
             # Store question and answer in database
             question_id = self.question_repo.create_question(
                 user_id=request.user_id,
@@ -31,10 +33,10 @@ class QuestionService:
             
             self.question_repo.create_answer(question_id, answer)
 
-            if record_recent:
+            if record_recent and is_biblical:
                 RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
             
-            return QuestionResponse(answer=answer, question_id=question_id)
+            return QuestionResponse(answer=answer, question_id=question_id, is_biblical=is_biblical)
             
         except Exception as e:
             logger.error(f"Error processing question: {e}")
@@ -55,6 +57,8 @@ class QuestionService:
                 conversation_history=conversation_history
             )
             
+            is_biblical = self.openai_service.is_biblical_answer(answer)
+
             # Store question and answer in database with parent reference
             question_id = self.question_repo.create_question(
                 user_id=request.user_id,
@@ -64,10 +68,10 @@ class QuestionService:
             
             self.question_repo.create_answer(question_id, answer)
 
-            if record_recent:
+            if record_recent and is_biblical:
                 RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
             
-            return QuestionResponse(answer=answer, question_id=question_id)
+            return QuestionResponse(answer=answer, question_id=question_id, is_biblical=is_biblical)
             
         except Exception as e:
             logger.error(f"Error processing follow-up question: {e}")

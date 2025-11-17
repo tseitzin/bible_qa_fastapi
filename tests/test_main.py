@@ -8,10 +8,34 @@ from fastapi import HTTPException
 from app.main import app
 from app.models.schemas import QuestionRequest, QuestionResponse, HistoryResponse, HistoryItem
 from app.utils.exceptions import DatabaseError, OpenAIError
+from app.auth import get_current_user, get_current_user_optional
 
 
 # Test client
 client = TestClient(app)
+
+
+@pytest.fixture
+def authenticated_user():
+    """Override authentication dependency to simulate a logged-in user."""
+    def override_current_user():
+        return {"id": 1, "is_active": True}
+
+    app.dependency_overrides[get_current_user] = override_current_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def optional_authenticated_user():
+    """Override optional authentication dependency to simulate a logged-in user."""
+
+    def override_optional_user():
+        return {"id": 7, "is_active": True}
+
+    app.dependency_overrides[get_current_user_optional] = override_optional_user
+    yield
+    app.dependency_overrides.pop(get_current_user_optional, None)
 
 
 class TestHealthCheck:
@@ -37,7 +61,8 @@ class TestAskQuestion:
         # Mock service response
         mock_response = QuestionResponse(
             answer="God is love, as stated in 1 John 4:8.",
-            question_id=123
+            question_id=123,
+            is_biblical=True,
         )
         mock_service.process_question = AsyncMock(return_value=mock_response)
         
@@ -53,6 +78,7 @@ class TestAskQuestion:
         data = response.json()
         assert data["answer"] == "God is love, as stated in 1 John 4:8."
         assert data["question_id"] == 123
+        assert data["is_biblical"] is True
         
         # Verify service was called correctly
         mock_service.process_question.assert_called_once()
@@ -65,7 +91,8 @@ class TestAskQuestion:
         """Test question submission with minimal required data."""
         mock_response = QuestionResponse(
             answer="Jesus is the way, the truth, and the life.",
-            question_id=456
+            question_id=456,
+            is_biblical=True,
         )
         mock_service.process_question = AsyncMock(return_value=mock_response)
         
@@ -79,6 +106,7 @@ class TestAskQuestion:
         data = response.json()
         assert data["answer"] == "Jesus is the way, the truth, and the life."
         assert data["question_id"] == 456
+        assert data["is_biblical"] is True
     
     def test_ask_question_missing_question(self):
         """Test question submission without required question field."""
@@ -131,12 +159,93 @@ class TestAskQuestion:
         data = response.json()
         assert data["detail"] == "Internal server error"
 
+    @patch('app.main.question_service')
+    def test_ask_question_authenticated_records_recent(self, mock_service, optional_authenticated_user):
+        """Authenticated requests propagate user id and record recent questions."""
+
+        mock_response = QuestionResponse(answer="Tracked", question_id=77, is_biblical=True)
+        mock_service.process_question = AsyncMock(return_value=mock_response)
+
+        response = client.post("/api/ask", json={"question": "Track this"})
+
+        assert response.status_code == 200
+        args, kwargs = mock_service.process_question.call_args
+        assert kwargs["record_recent"] is True
+        assert args[0].user_id == 7
+
+
+class TestAskFollowUpQuestion:
+    """Test cases for the follow-up question endpoint."""
+
+    @patch('app.main.question_service')
+    def test_ask_followup_question_success(self, mock_service):
+        """Test successful follow-up question submission."""
+        mock_response = QuestionResponse(answer="Extended context", question_id=321, is_biblical=True)
+        mock_service.process_followup_question = AsyncMock(return_value=mock_response)
+
+        request_data = {
+            "question": "Can you tell me more?",
+            "conversation_history": [
+                {"role": "user", "content": "Initial question"},
+                {"role": "assistant", "content": "Initial answer"}
+            ],
+            "parent_question_id": 123,
+            "user_id": 2
+        }
+
+        response = client.post("/api/ask/followup", json=request_data)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["answer"] == "Extended context"
+        assert data["question_id"] == 321
+        assert data["is_biblical"] is True
+        mock_service.process_followup_question.assert_called_once()
+
+    @patch('app.main.question_service')
+    def test_ask_followup_question_service_error(self, mock_service):
+        """Test follow-up question when service raises error."""
+        mock_service.process_followup_question = AsyncMock(side_effect=Exception("Processing failed"))
+
+        request_data = {
+            "question": "Explain further",
+            "conversation_history": [],
+            "parent_question_id": 1,
+            "user_id": 1
+        }
+
+        response = client.post("/api/ask/followup", json=request_data)
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    @patch('app.main.question_service')
+    def test_ask_followup_question_authenticated_records_recent(self, mock_service, optional_authenticated_user):
+        """Authenticated follow-up requests propagate user id and record recents."""
+
+        mock_response = QuestionResponse(answer="Extended", question_id=99, is_biblical=True)
+        mock_service.process_followup_question = AsyncMock(return_value=mock_response)
+
+        response = client.post(
+            "/api/ask/followup",
+            json={
+                "question": "Provide more context",
+                "conversation_history": [],
+                "parent_question_id": 12,
+            },
+        )
+
+        assert response.status_code == 200
+        args, kwargs = mock_service.process_followup_question.call_args
+        assert kwargs["record_recent"] is True
+        assert args[0].user_id == 7
+
 
 class TestQuestionHistory:
     """Test cases for the question history endpoint."""
     
     @patch('app.main.question_service')
-    def test_get_history_success(self, mock_service):
+    def test_get_history_success(self, mock_service, authenticated_user):
         """Test successful history retrieval."""
         # Mock service response
         mock_history_items = [
@@ -159,7 +268,7 @@ class TestQuestionHistory:
         )
         mock_service.get_user_history = Mock(return_value=mock_response)
         
-        response = client.get("/api/history/1")
+        response = client.get("/api/history")
         
         assert response.status_code == 200
         data = response.json()
@@ -172,35 +281,35 @@ class TestQuestionHistory:
         mock_service.get_user_history.assert_called_once_with(1, 10)
     
     @patch('app.main.question_service')
-    def test_get_history_with_custom_limit(self, mock_service):
+    def test_get_history_with_custom_limit(self, mock_service, authenticated_user):
         """Test history retrieval with custom limit."""
         mock_response = HistoryResponse(questions=[], total=0)
         mock_service.get_user_history = Mock(return_value=mock_response)
         
-        response = client.get("/api/history/1?limit=5")
+        response = client.get("/api/history?limit=5")
         
         assert response.status_code == 200
         mock_service.get_user_history.assert_called_once_with(1, 5)
     
     @patch('app.main.question_service')
-    def test_get_history_limit_too_high(self, mock_service):
+    def test_get_history_limit_too_high(self, mock_service, authenticated_user):
         """Test history retrieval with limit higher than maximum."""
         mock_response = HistoryResponse(questions=[], total=0)
         mock_service.get_user_history = Mock(return_value=mock_response)
         
-        response = client.get("/api/history/1?limit=200")
+        response = client.get("/api/history?limit=200")
         
         assert response.status_code == 200
         # Should be capped at 100
         mock_service.get_user_history.assert_called_once_with(1, 100)
     
     @patch('app.main.question_service')
-    def test_get_history_empty_result(self, mock_service):
+    def test_get_history_empty_result(self, mock_service, authenticated_user):
         """Test history retrieval with no results."""
         mock_response = HistoryResponse(questions=[], total=0)
         mock_service.get_user_history = Mock(return_value=mock_response)
         
-        response = client.get("/api/history/999")
+        response = client.get("/api/history")
         
         assert response.status_code == 200
         data = response.json()
@@ -208,23 +317,23 @@ class TestQuestionHistory:
         assert len(data["questions"]) == 0
     
     @patch('app.main.question_service')
-    def test_get_history_service_error(self, mock_service):
+    def test_get_history_service_error(self, mock_service, authenticated_user):
         """Test history retrieval when service raises an error."""
         mock_service.get_user_history = Mock(
             side_effect=Exception("Database error")
         )
         
-        response = client.get("/api/history/1")
+        response = client.get("/api/history")
         
         assert response.status_code == 500
         data = response.json()
         assert data["detail"] == "Internal server error"
-    
-    def test_get_history_invalid_user_id(self):
-        """Test history retrieval with invalid user ID."""
-        response = client.get("/api/history/invalid")
-        
-        assert response.status_code == 422  # Validation error
+
+    def test_get_history_requires_authentication(self):
+        """Ensure the endpoint requires authentication when no user is provided."""
+        app.dependency_overrides.pop(get_current_user, None)
+        response = client.get("/api/history")
+        assert response.status_code == 401
 
 
 class TestErrorHandlers:
@@ -304,7 +413,8 @@ def sample_question_response():
     """Sample question response for testing."""
     return QuestionResponse(
         answer="Faith is the substance of things hoped for.",
-        question_id=123
+        question_id=123,
+        is_biblical=True,
     )
 
 

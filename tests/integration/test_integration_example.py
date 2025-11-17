@@ -6,6 +6,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.database import QuestionRepository
 from app.config import get_settings
+from app.auth import create_access_token
+
+import psycopg2
+from psycopg2 import OperationalError
 
 # Mark integration tests
 pytestmark = pytest.mark.integration
@@ -21,6 +25,14 @@ def test_db():
         load_dotenv(test_env_path, override=True)
     
     settings = get_settings()
+
+    # Ensure the configured Postgres database is reachable; otherwise skip.
+    try:
+        conn = psycopg2.connect(**settings.db_config)
+        conn.close()
+    except OperationalError:
+        pytest.skip("PostgreSQL test database not available")
+
     yield settings.db_name
     
     # Note: Database cleanup is handled by the setup script
@@ -133,6 +145,12 @@ class TestDatabaseIntegration:
 
 class TestAPIIntegration:
     """Integration tests for API endpoints with real database."""
+
+    @staticmethod
+    def _auth_headers(user_id: int) -> dict:
+        """Generate Authorization header for the given user."""
+        token = create_access_token({"sub": str(user_id)})
+        return {"Authorization": f"Bearer {token}"}
     
     def test_ask_question_end_to_end(self, test_db, client, mock_openai_service):
         """Test complete question flow with real database and mocked OpenAI."""
@@ -142,10 +160,14 @@ class TestAPIIntegration:
         # Submit question via API
         # Ensure user exists for FK
         TestDatabaseIntegration._ensure_user(456)
-        response = client.post("/api/ask", json={
-            "question": "What is the significance of John 3:16?",
-            "user_id": 456
-        })
+        response = client.post(
+            "/api/ask",
+            json={
+                "question": "What is the significance of John 3:16?",
+                "user_id": 456
+            },
+            headers=self._auth_headers(456)
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -156,7 +178,10 @@ class TestAPIIntegration:
         question_id = data["question_id"]
         
         # Verify question was stored in database via API
-        history_response = client.get("/api/history/456")
+        history_response = client.get(
+            "/api/history",
+            headers=self._auth_headers(456)
+        )
         assert history_response.status_code == 200
         
         history_data = history_response.json()
@@ -191,19 +216,29 @@ class TestAPIIntegration:
         
         # Create some test data via API
         for i in range(3):
-            response = client.post("/api/ask", json={
-                "question": f"Test question {i}",
-                "user_id": user_id
-            })
+            response = client.post(
+                "/api/ask",
+                json={
+                    "question": f"Test question {i}",
+                    "user_id": user_id
+                },
+                headers=self._auth_headers(user_id)
+            )
             assert response.status_code == 200
         
         # Test different limits
-        response_limit_2 = client.get(f"/api/history/{user_id}?limit=2")
+        response_limit_2 = client.get(
+            f"/api/history?limit=2",
+            headers=self._auth_headers(user_id)
+        )
         assert response_limit_2.status_code == 200
         data_limit_2 = response_limit_2.json()
         assert len(data_limit_2["questions"]) == 2
         
-        response_limit_5 = client.get(f"/api/history/{user_id}?limit=5")
+        response_limit_5 = client.get(
+            f"/api/history?limit=5",
+            headers=self._auth_headers(user_id)
+        )
         assert response_limit_5.status_code == 200
         data_limit_5 = response_limit_5.json()
         assert len(data_limit_5["questions"]) >= 3
@@ -214,17 +249,24 @@ class TestAPIIntegration:
         mock_openai_service.side_effect = Exception("OpenAI API Error")
         
         TestDatabaseIntegration._ensure_user(999)
-        response = client.post("/api/ask", json={
-            "question": "This will fail",
-            "user_id": 999
-        })
+        response = client.post(
+            "/api/ask",
+            json={
+                "question": "This will fail",
+                "user_id": 999
+            },
+            headers=self._auth_headers(999)
+        )
         
         assert response.status_code == 500
         data = response.json()
         assert "detail" in data
         
         # Verify no question was stored in database when OpenAI fails
-        history_response = client.get("/api/history/999")
+        history_response = client.get(
+            "/api/history",
+            headers=self._auth_headers(999)
+        )
         assert history_response.status_code == 200
         history_data = history_response.json()
         
