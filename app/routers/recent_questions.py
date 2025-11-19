@@ -1,7 +1,8 @@
 """Endpoints for managing a user's recent questions list."""
 from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
 
-from app.auth import get_current_user
+from app.auth import get_current_user_dependency
 from app.database import RecentQuestionsRepository
 from app.models.schemas import (
     RecentQuestionCreate,
@@ -15,9 +16,11 @@ router = APIRouter(
     tags=["recent-questions"],
 )
 
+CurrentUser = Annotated[dict, Depends(get_current_user_dependency)]
+
 
 @router.get("", response_model=RecentQuestionsResponse)
-async def list_recent_questions(current_user: dict = Depends(get_current_user)):
+async def list_recent_questions(current_user: CurrentUser):
     """Return the most recent questions asked by the authenticated user."""
     records = RecentQuestionsRepository.get_recent_questions(current_user["id"])
     recent_questions = [
@@ -30,7 +33,7 @@ async def list_recent_questions(current_user: dict = Depends(get_current_user)):
 @router.post("", response_model=RecentQuestionsResponse, status_code=status.HTTP_200_OK)
 async def add_recent_question(
     payload: RecentQuestionCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: CurrentUser,
 ):
     """Explicitly record a recent question and return the updated list."""
     question_text = payload.question.strip()
@@ -49,7 +52,7 @@ async def add_recent_question(
 @router.delete("/{recent_question_id}", response_model=RecentQuestionsResponse, status_code=status.HTTP_200_OK)
 async def delete_recent_question(
     recent_question_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: CurrentUser,
 ):
     """Remove a specific recent question for the authenticated user and return the updated list."""
     deleted = RecentQuestionsRepository.delete_recent_question(current_user["id"], recent_question_id)

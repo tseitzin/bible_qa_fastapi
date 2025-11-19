@@ -92,12 +92,6 @@ class UserLogin(BaseModel):
     password: str = Field(..., description="Password")
 
 
-class Token(BaseModel):
-    """Response model for authentication token."""
-    access_token: str
-    token_type: str = "bearer"
-
-
 class User(BaseModel):
     """Response model for user data."""
     id: int

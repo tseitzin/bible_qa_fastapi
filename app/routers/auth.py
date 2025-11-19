@@ -1,22 +1,30 @@
 """Authentication routes for user registration and login."""
-from fastapi import APIRouter, HTTPException, status, Depends
-from app.models.schemas import UserCreate, UserLogin, Token, User
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from app.models.schemas import UserCreate, UserLogin, User
 from app.auth import (
-    create_user, 
-    get_user_by_email, 
-    verify_password, 
+    create_user,
+    get_user_by_email,
+    verify_password,
     create_access_token,
-    get_current_user
+    get_current_user,
+    set_auth_cookie,
+    clear_auth_cookie,
+    get_user_by_id,
+    generate_csrf_token,
+    set_csrf_cookie,
+    clear_csrf_cookie,
 )
+from app.config import get_settings
 import logging
 from psycopg2 import IntegrityError
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+settings = get_settings()
 
 
-@router.post("/register", response_model=User, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
     """Register a new user."""
     try:
@@ -36,7 +44,7 @@ async def register(user_data: UserCreate):
         )
         
         logger.info(f"New user registered: {user['email']}")
-        return user
+        return User.model_validate(user).model_dump()
     
     except HTTPException:
         raise
@@ -53,9 +61,9 @@ async def register(user_data: UserCreate):
         )
 
 
-@router.post("/login", response_model=Token)
-async def login(credentials: UserLogin):
-    """Authenticate user and return access token."""
+@router.post("/login")
+async def login(credentials: UserLogin, response: Response):
+    """Authenticate user and establish a session via secure cookie."""
     user = get_user_by_email(credentials.email)
     
     if not user or not verify_password(credentials.password, user["hashed_password"]):
@@ -73,12 +81,35 @@ async def login(credentials: UserLogin):
     
     # Create access token
     access_token = create_access_token(data={"sub": str(user["id"])})
-    
+    set_auth_cookie(response, access_token)
+
+    csrf_token = generate_csrf_token()
+    set_csrf_cookie(response, csrf_token)
+    response.headers[settings.csrf_header_name] = csrf_token
+
     logger.info(f"User logged in: {user['email']}")
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    sanitized_user = get_user_by_id(user["id"]) or {
+        "id": user["id"],
+        "email": user["email"],
+        "username": user["username"],
+        "is_active": user["is_active"],
+        "created_at": user.get("created_at"),
+    }
+    return User.model_validate(sanitized_user).model_dump()
 
 
-@router.get("/me", response_model=User)
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    """Terminate the current session by clearing the auth cookie."""
+    clear_auth_cookie(response)
+    clear_csrf_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return None
+
+
+@router.get("/me")
+async def get_current_user_info(request: Request):
     """Get current authenticated user information."""
-    return current_user
+    current_user = await get_current_user(request=request)
+    return User.model_validate(current_user).model_dump()

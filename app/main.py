@@ -1,5 +1,6 @@
 """Bible Q&A FastAPI Application."""
 from datetime import datetime
+from typing import Annotated, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,8 +13,12 @@ from app.models.schemas import (
 )
 from app.services.question_service import QuestionService
 from app.utils.exceptions import DatabaseError, OpenAIError
-from app.auth import get_current_user, get_current_user_optional
+from app.auth import (
+    get_current_user_dependency,
+    get_current_user_optional_dependency,
+)
 from app.routers import auth, saved_answers, bible, recent_questions
+from app.middleware.csrf import CSRFMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +35,8 @@ app = FastAPI(
     description="AI-powered Bible Q&A API",
     version="1.0.0"
 )
+
+app.add_middleware(CSRFMiddleware, settings=settings)
 
 # Configure CORS
 app.add_middleware(
@@ -50,6 +57,9 @@ app.include_router(saved_answers.router)
 app.include_router(bible.router)
 app.include_router(recent_questions.router)
 
+CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user_dependency)]
+OptionalCurrentUser = Annotated[Optional[Dict[str, Any]], Depends(get_current_user_optional_dependency)]
+
 
 @app.get("/", response_model=HealthCheck)
 async def health_check():
@@ -63,7 +73,7 @@ async def health_check():
 @app.post("/api/ask", response_model=QuestionResponse)
 async def ask_question(
     request: QuestionRequest,
-    current_user: dict = Depends(get_current_user_optional)
+    current_user: OptionalCurrentUser
 ):
     """Submit a Bible-related question and get an AI-generated answer (guest or authenticated)."""
     try:
@@ -89,7 +99,7 @@ async def ask_question(
 @app.post("/api/ask/followup", response_model=QuestionResponse)
 async def ask_followup_question(
     request: FollowUpQuestionRequest,
-    current_user: dict = Depends(get_current_user_optional)
+    current_user: OptionalCurrentUser
 ):
     """Submit a follow-up question with conversation context."""
     try:
@@ -114,8 +124,8 @@ async def ask_followup_question(
 
 @app.get("/api/history", response_model=HistoryResponse)
 async def get_question_history(
+    current_user: CurrentUser,
     limit: int = 10,
-    current_user: dict = Depends(get_current_user)
 ):
     """Get question history for authenticated user."""
     try:

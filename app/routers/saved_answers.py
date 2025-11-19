@@ -1,20 +1,22 @@
 """Saved answers routes for managing user's saved Q&A."""
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from typing import Optional
+from typing import Annotated, Optional
 from app.models.schemas import SavedAnswerCreate, SavedAnswerResponse, SavedAnswersListResponse
 from app.database import SavedAnswersRepository
-from app.auth import get_current_user
+from app.auth import get_current_user_dependency
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/saved-answers", tags=["saved-answers"])
 
+CurrentUser = Annotated[dict, Depends(get_current_user_dependency)]
+
 
 @router.post("", response_model=SavedAnswerResponse, status_code=status.HTTP_201_CREATED)
 async def save_answer(
     data: SavedAnswerCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: CurrentUser
 ):
     """Save an answer to user's collection."""
     try:
@@ -49,10 +51,10 @@ async def save_answer(
 
 @router.get("", response_model=SavedAnswersListResponse)
 async def get_saved_answers(
+    current_user: CurrentUser,
     limit: int = Query(default=100, ge=1, le=500),
     query: Optional[str] = Query(default=None, description="Search query"),
-    tag: Optional[str] = Query(default=None, description="Filter by tag"),
-    current_user: dict = Depends(get_current_user)
+    tag: Optional[str] = Query(default=None, description="Filter by tag")
 ):
     """Get user's saved answers with optional search and filtering."""
     try:
@@ -84,7 +86,7 @@ async def get_saved_answers(
 @router.delete("/{saved_answer_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_answer(
     saved_answer_id: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: CurrentUser
 ):
     """Delete a saved answer from user's collection."""
     try:
@@ -113,7 +115,7 @@ async def delete_saved_answer(
 
 
 @router.get("/tags", response_model=list[str])
-async def get_tags(current_user: dict = Depends(get_current_user)):
+async def get_tags(current_user: CurrentUser):
     """Get all unique tags used by the user."""
     try:
         tags = SavedAnswersRepository.get_user_tags(user_id=current_user["id"])

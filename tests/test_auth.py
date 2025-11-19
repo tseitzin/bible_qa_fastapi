@@ -8,6 +8,7 @@ from jose import jwt
 from jose import JWTError
 
 from app.main import app
+from app.config import get_settings
 from app.auth import (
     get_password_hash,
     verify_password,
@@ -18,6 +19,13 @@ from app.auth import (
 
 # Test client
 client = TestClient(app)
+settings = get_settings()
+
+
+def _csrf_headers(token: str = "test-csrf-token"):
+    """Attach a CSRF cookie to the shared client and return matching headers."""
+    client.cookies.set(settings.csrf_cookie_name, token)
+    return {settings.csrf_header_name: token}
 
 
 class TestUserRegistration:
@@ -155,44 +163,63 @@ class TestUserRegistration:
 class TestUserLogin:
     """Test cases for user login and JWT token generation."""
     
+    @patch('app.routers.auth.get_user_by_id')
     @patch('app.routers.auth.get_user_by_email')
     @patch('app.routers.auth.verify_password')
-    def test_login_returns_valid_jwt_token(self, mock_verify_password, mock_get_user_by_email):
-        """Test that user login returns a valid JWT token for correct credentials."""
-        # Mock user retrieval
+    def test_login_sets_cookie_and_returns_user(self, mock_verify_password, mock_get_user_by_email, mock_get_user_by_id):
+        """Successful login issues an HttpOnly cookie and returns sanitized user info."""
+        client.cookies.clear()
+
+        created_at = datetime.utcnow()
         mock_user = {
             'id': 1,
             'email': 'test@example.com',
             'username': 'testuser',
             'hashed_password': 'hashed_password',
             'is_active': True,
-            'created_at': datetime.utcnow()
+            'created_at': created_at,
         }
         mock_get_user_by_email.return_value = mock_user
         mock_verify_password.return_value = True
-        
-        # Test login
+        mock_get_user_by_id.return_value = {
+            'id': 1,
+            'email': 'test@example.com',
+            'username': 'testuser',
+            'is_active': True,
+            'created_at': created_at,
+        }
+
         request_data = {
             'email': 'test@example.com',
             'password': 'correct_password'
         }
-        
+
         response = client.post('/api/auth/login', json=request_data)
-        
+
         assert response.status_code == 200
         data = response.json()
-        assert 'access_token' in data
-        assert data['token_type'] == 'bearer'
-        
-        # Verify token is valid JWT
-        token = data['access_token']
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        assert decoded['sub'] == '1'  # User ID
-        assert 'exp' in decoded  # Expiration time
+        assert data['email'] == 'test@example.com'
+        assert data['username'] == 'testuser'
+        assert data['is_active'] is True
+
+        cookie_value = response.cookies.get(settings.auth_cookie_name)
+        assert cookie_value
+
+        csrf_cookie = response.cookies.get(settings.csrf_cookie_name)
+        assert csrf_cookie
+        assert response.headers.get(settings.csrf_header_name) == csrf_cookie
+
+        set_cookie_header = response.headers.get('set-cookie', '')
+        assert settings.auth_cookie_name in set_cookie_header
+        assert 'HttpOnly' in set_cookie_header
+
+        decoded = jwt.decode(cookie_value, SECRET_KEY, algorithms=[ALGORITHM])
+        assert decoded['sub'] == '1'
+        assert 'exp' in decoded
     
-    @patch('app.routers.auth.verify_password')
     @patch('app.routers.auth.get_user_by_email')
-    def test_login_wrong_password_fails(self, mock_get_user_by_email, mock_verify_password):
+    @patch('app.routers.auth.verify_password')
+    def test_login_wrong_password_fails(self, mock_verify_password, mock_get_user_by_email):
         """Test that login fails with wrong password."""
         # Mock user retrieval
         mock_user = {
@@ -211,6 +238,7 @@ class TestUserLogin:
             'password': 'wrong_password'
         }
         
+        client.cookies.clear()
         response = client.post('/api/auth/login', json=request_data)
         
         assert response.status_code == 401
@@ -227,6 +255,7 @@ class TestUserLogin:
             'password': 'password123'
         }
         
+        client.cookies.clear()
         response = client.post('/api/auth/login', json=request_data)
         
         assert response.status_code == 401
@@ -252,11 +281,26 @@ class TestUserLogin:
             'password': 'correct_password'
         }
         
+        client.cookies.clear()
         response = client.post('/api/auth/login', json=request_data)
         
         assert response.status_code == 400
         data = response.json()
         assert data['detail'] == 'Inactive user account'
+
+    def test_logout_clears_cookie(self):
+        """Logout endpoint clears the auth cookie."""
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, 'dummy')
+        headers = _csrf_headers()
+
+        response = client.post('/api/auth/logout', headers=headers)
+
+        assert response.status_code == 204
+        set_cookie_header = "; ".join(response.headers.get_list('set-cookie'))
+        assert settings.auth_cookie_name in set_cookie_header
+        assert settings.csrf_cookie_name in set_cookie_header
+        assert 'max-age=0' in set_cookie_header.lower()
     
     def test_jwt_token_contains_user_id(self):
         """Test that JWT token contains user ID in subject claim."""
@@ -285,6 +329,7 @@ class TestProtectedEndpointAccess:
         """Test that protected API endpoints deny access without a valid JWT token."""
         # Test history endpoint (requires authentication)
         # Don't provide Authorization header at all
+        client.cookies.clear()
         response = client.get('/api/history')
         
         # When no token is provided, oauth2_scheme returns None
@@ -292,12 +337,13 @@ class TestProtectedEndpointAccess:
         assert response.status_code == 401
         data = response.json()
         assert data['detail'] == 'Could not validate credentials'
-    
+
     def test_protected_endpoint_denies_access_with_invalid_token(self):
         """Test that protected endpoints deny access with invalid token."""
-        headers = {'Authorization': 'Bearer invalid_token_123'}
-        response = client.get('/api/history', headers=headers)
-        
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, 'invalid_token_123')
+        response = client.get('/api/history')
+
         assert response.status_code == 401
         data = response.json()
         assert data['detail'] == 'Could not validate credentials'
@@ -310,8 +356,9 @@ class TestProtectedEndpointAccess:
             expires_delta=timedelta(minutes=-10)
         )
         
-        headers = {'Authorization': f'Bearer {expired_token}'}
-        response = client.get('/api/history', headers=headers)
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, expired_token)
+        response = client.get('/api/history')
         
         assert response.status_code == 401
         data = response.json()
@@ -319,9 +366,10 @@ class TestProtectedEndpointAccess:
     
     def test_protected_endpoint_denies_access_with_malformed_token(self):
         """Test that protected endpoints deny access with malformed token."""
-        headers = {'Authorization': 'Bearer not.a.jwt.token'}
-        response = client.get('/api/history', headers=headers)
-        
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, 'not.a.jwt.token')
+        response = client.get('/api/history')
+
         assert response.status_code == 401
     
     @patch('app.auth.get_user_by_id')
@@ -350,9 +398,9 @@ class TestProtectedEndpointAccess:
             total=0
         )
         
-        # Test protected endpoint with valid token
-        headers = {'Authorization': f'Bearer {token}'}
-        response = client.get('/api/history', headers=headers)
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+        response = client.get('/api/history')
         
         assert response.status_code == 200
         data = response.json()
@@ -373,8 +421,9 @@ class TestProtectedEndpointAccess:
         }
         mock_get_user_by_id.return_value = mock_user
         
-        headers = {'Authorization': f'Bearer {token}'}
-        response = client.get('/api/auth/me', headers=headers)
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+        response = client.get('/api/auth/me')
         
         assert response.status_code == 200
         data = response.json()
@@ -425,8 +474,10 @@ class TestSavedAnswersAssociation:
             'question_id': 123,
             'tags': ['love', 'god']
         }
-        
-        headers = {'Authorization': f'Bearer {token}'}
+
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+        headers = _csrf_headers()
         response = client.post('/api/saved-answers', json=request_data, headers=headers)
         
         assert response.status_code == 201
@@ -474,8 +525,9 @@ class TestSavedAnswersAssociation:
         mock_get_saved.return_value = mock_saved_answers
         
         # Get saved answers
-        headers = {'Authorization': f'Bearer {token}'}
-        response = client.get('/api/saved-answers', headers=headers)
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+        response = client.get('/api/saved-answers')
         
         assert response.status_code == 200
         data = response.json()
@@ -505,17 +557,44 @@ class TestSavedAnswersAssociation:
         mock_delete.return_value = True
         
         # Delete saved answer
-        headers = {'Authorization': f'Bearer {token}'}
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+        headers = _csrf_headers()
         response = client.delete('/api/saved-answers/123', headers=headers)
         
         assert response.status_code == 204
         
         # Verify delete was called with correct user_id
         mock_delete.assert_called_once_with(user_id=1, saved_answer_id=123)
+
+    @patch('app.auth.get_user_by_id')
+    @patch('app.database.SavedAnswersRepository.save_answer')
+    def test_saved_answer_creation_requires_csrf_header(
+        self, mock_save_answer, mock_get_user_by_id
+    ):
+        """Authenticated requests without a CSRF header should be rejected."""
+        token = create_access_token(data={'sub': '1'})
+
+        mock_get_user_by_id.return_value = {
+            'id': 1,
+            'email': 'test@example.com',
+            'username': 'testuser',
+            'is_active': True,
+            'created_at': datetime.utcnow()
+        }
+
+        client.cookies.clear()
+        client.cookies.set(settings.auth_cookie_name, token)
+
+        response = client.post('/api/saved-answers', json={'question_id': 1, 'tags': []})
+
+        assert response.status_code == 403
+        mock_save_answer.assert_not_called()
     
     @patch('app.auth.get_user_by_id')
     def test_saved_answers_endpoint_denies_access_without_token(self, mock_get_user_by_id):
         """Test that saved answers endpoints require authentication."""
+        client.cookies.clear()
         # Try to save answer without token
         request_data = {'question_id': 123, 'tags': []}
         response = client.post('/api/saved-answers', json=request_data)

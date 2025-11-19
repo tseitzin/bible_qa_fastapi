@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings."""
     
     # API Configuration
-    app_name: str = "Bible Q&A API"
+    app_name: str = Field(default="Bible Q&A API", env="APP_NAME")
     debug: bool = Field(default=False, env="DEBUG")
     
     # Database Configuration (Heroku compatible)
@@ -36,6 +36,19 @@ class Settings(BaseSettings):
         default="your-secret-key-change-this-in-production-use-openssl-rand-hex-32",
         env="SECRET_KEY"
     )
+    auth_cookie_name: str = Field(default="bible_qa_auth", env="AUTH_COOKIE_NAME")
+    auth_cookie_domain: str = Field(default="", env="AUTH_COOKIE_DOMAIN")
+    auth_cookie_secure: bool = Field(default=False, env="AUTH_COOKIE_SECURE")
+    auth_cookie_samesite: str = Field(default="lax", env="AUTH_COOKIE_SAMESITE")
+    auth_cookie_max_age: int = Field(default=60 * 60 * 24 * 7, env="AUTH_COOKIE_MAX_AGE")
+
+    # CSRF Configuration
+    csrf_cookie_name: str = Field(default="bible_qa_csrf", env="CSRF_COOKIE_NAME")
+    csrf_cookie_secure: bool = Field(default=False, env="CSRF_COOKIE_SECURE")
+    csrf_cookie_samesite: str = Field(default="strict", env="CSRF_COOKIE_SAMESITE")
+    csrf_cookie_max_age: int = Field(default=60 * 60 * 6, env="CSRF_COOKIE_MAX_AGE")  # 6 hours
+    csrf_header_name: str = Field(default="X-CSRF-Token", env="CSRF_HEADER_NAME")
+    csrf_protection_enabled: bool = Field(default=True, env="CSRF_PROTECTION_ENABLED")
     
     # CORS Configuration
     @computed_field
@@ -58,6 +71,13 @@ class Settings(BaseSettings):
                 normalized.add(f"https://www.{host}")
 
         return sorted(normalized)
+
+    @computed_field
+    @property
+    def csrf_exempt_paths(self) -> list[str]:
+        """List of path prefixes that are exempt from CSRF validation."""
+        raw_paths = os.getenv("CSRF_EXEMPT_PATHS", "/api/auth/login,/api/auth/register")
+        return [path.strip() for path in raw_paths.split(",") if path.strip()]
     
     @property
     def db_config(self) -> dict:
