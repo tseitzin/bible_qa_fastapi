@@ -1,6 +1,7 @@
 """CSRF protection middleware using the double-submit cookie pattern."""
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from fastapi import Request
@@ -8,6 +9,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
@@ -39,7 +42,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         header_name = self.settings.csrf_header_name
         csrf_header = request.headers.get(header_name)
 
+        logger.info(f"CSRF validation for {path}: cookie={csrf_cookie[:8] if csrf_cookie else None}..., header={csrf_header[:8] if csrf_header else None}..., match={csrf_cookie == csrf_header}")
+
         if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+            logger.warning(f"CSRF validation failed: cookie_present={bool(csrf_cookie)}, header_present={bool(csrf_header)}, match={csrf_cookie == csrf_header if csrf_cookie and csrf_header else False}")
             return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
 
         return await call_next(request)
