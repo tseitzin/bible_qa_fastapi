@@ -109,9 +109,10 @@ async def ask_followup_question(
         else:
             request.user_id = 1  # Guest user ID
         
+        # Follow-up questions should not appear in the "recent questions" list
         result = await question_service.process_followup_question(
             request,
-            record_recent=bool(current_user)
+            record_recent=False
         )
         return result
     except (DatabaseError, OpenAIError):

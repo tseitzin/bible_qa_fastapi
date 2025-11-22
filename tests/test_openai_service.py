@@ -30,6 +30,36 @@ class TestGetBibleAnswer:
             mock_settings.return_value.openai_request_timeout = 30
             mock_settings.return_value.openai_max_history_messages = 12
             self.service = OpenAIService()
+    @pytest.mark.asyncio
+    async def test_timeout_recovers_with_trimmed_history(self, monkeypatch):
+        """Service retries with smaller history windows before surfacing timeout."""
+
+        attempt_messages = []
+
+        async def fake_request(messages, max_tokens):
+            attempt_messages.append(messages)
+            if len(attempt_messages) < 3:
+                raise asyncio.TimeoutError()
+            response = Mock()
+            response.output_text = "Recovered"
+            response.status = "completed"
+            return response
+
+        self.service._request_response = fake_request
+
+        history = [
+            {"role": "user", "content": "Q1"},
+            {"role": "assistant", "content": "A1"},
+            {"role": "user", "content": "Q2"},
+            {"role": "assistant", "content": "A2"},
+        ]
+
+        answer = await self.service.get_bible_answer("Follow up?", conversation_history=history)
+
+        assert answer == "Recovered"
+        assert len(attempt_messages) == 3
+        assert len(attempt_messages[0]) == len(history) + 2
+        assert len(attempt_messages[-1]) == 2
 
     @pytest.mark.asyncio
     async def test_returns_correctly_formatted_response(self):
@@ -338,6 +368,19 @@ class TestNormalizeHistory:
         history = [{"role": "assistant", "content": {"key": "value"}}]
         normalized = self.service._normalize_history(history)
         assert normalized[0]["content"][0]["text"] == "{'key': 'value'}"
+
+    def test_normalize_history_supports_objects(self):
+        """History entries provided as objects (e.g., Pydantic models) are supported."""
+
+        class Msg:
+            def __init__(self, role, content):
+                self.role = role
+                self.content = content
+
+        history = [Msg("assistant", "Typed message")]
+        normalized = self.service._normalize_history(history)
+        assert normalized[0]["role"] == "assistant"
+        assert normalized[0]["content"][0]["text"] == "Typed message"
 
 
 class TestRequestResponse:

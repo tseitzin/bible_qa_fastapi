@@ -220,8 +220,8 @@ class TestAskFollowUpQuestion:
         assert response.json()["detail"] == "Internal server error"
 
     @patch('app.main.question_service')
-    def test_ask_followup_question_authenticated_records_recent(self, mock_service, optional_authenticated_user):
-        """Authenticated follow-up requests propagate user id and record recents."""
+    def test_ask_followup_question_authenticated_skips_recents(self, mock_service, optional_authenticated_user):
+        """Authenticated follow-up requests propagate user id but skip recent tracking."""
 
         mock_response = QuestionResponse(answer="Extended", question_id=99, is_biblical=True)
         mock_service.process_followup_question = AsyncMock(return_value=mock_response)
@@ -237,7 +237,7 @@ class TestAskFollowUpQuestion:
 
         assert response.status_code == 200
         args, kwargs = mock_service.process_followup_question.call_args
-        assert kwargs["record_recent"] is True
+        assert kwargs["record_recent"] is False
         assert args[0].user_id == 7
 
 
