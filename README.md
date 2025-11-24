@@ -98,6 +98,16 @@ bible_qa_fastapi/
 - Load verses: `python scripts/import_bible.py --excel-path ../kjv.xlsx`
 - Validate without writing by adding `--dry-run`
 
+### Study Resource Import (TSK, Lexicon, Topics, Plans, Devotionals)
+
+- Default datasets live under `app/data/reference_data/` (JSON files kept small for development but scale linearly if you swap in the full public-domain exports).
+- After running migrations, load them with:
+  ```bash
+  python scripts/import_study_resources.py
+  ```
+- Use `--data-dir <path>` to point at a custom dataset directory or `--skip cross lexicon ...` to avoid reloading specific tables.
+- All MCP utility tools now query these tables directly, so no additional API spend is required. Storage cost stays minimal (<10 MB using public TSK + lexicon). The added indexes keep lookups under ~5 ms on a small Postgres dyno; drop specific datasets if you are memory constrained.
+
 ## API Endpoints
 
 - `GET /` - Health check

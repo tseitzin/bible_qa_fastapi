@@ -17,8 +17,9 @@ from app.auth import (
     get_current_user_dependency,
     get_current_user_optional_dependency,
 )
-from app.routers import auth, saved_answers, bible, recent_questions
+from app.routers import auth, saved_answers, bible, recent_questions, study_resources
 from app.middleware.csrf import CSRFMiddleware
+from app.mcp.router import router as mcp_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +57,8 @@ app.include_router(auth.router)
 app.include_router(saved_answers.router)
 app.include_router(bible.router)
 app.include_router(recent_questions.router)
+app.include_router(study_resources.router)
+app.include_router(mcp_router)
 
 CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user_dependency)]
 OptionalCurrentUser = Annotated[Optional[Dict[str, Any]], Depends(get_current_user_optional_dependency)]

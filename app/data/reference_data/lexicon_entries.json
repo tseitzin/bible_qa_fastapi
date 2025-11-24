@@ -1,0 +1,35 @@
+[
+  {
+    "strongs_number": "G26",
+    "lemma": "ἀγάπη",
+    "transliteration": "agapē",
+    "pronunciation": "ag-AH-pay",
+    "language": "Greek",
+    "definition": "Self-giving love that seeks the good of the other regardless of feeling.",
+    "usage": "Used of God's covenant love toward humanity and the Spirit-produced love between believers.",
+    "references": ["John 3:16", "1 Corinthians 13", "1 John 4:7-12"],
+    "metadata": {"part_of_speech": "noun feminine"}
+  },
+  {
+    "strongs_number": "H2617",
+    "lemma": "חֶסֶד",
+    "transliteration": "chesed",
+    "pronunciation": "KHEH-sed",
+    "language": "Hebrew",
+    "definition": "Steadfast covenant loyalty expressed through mercy and faithful kindness.",
+    "usage": "Describes Yahweh's faithful love toward Israel and the ethical kindness expected of His people.",
+    "references": ["Exodus 34:6", "Psalm 136", "Micah 6:8"],
+    "metadata": {"part_of_speech": "noun feminine"}
+  },
+  {
+    "strongs_number": "G4102",
+    "lemma": "πίστις",
+    "transliteration": "pistis",
+    "pronunciation": "PIS-tis",
+    "language": "Greek",
+    "definition": "Faith, trust, or faithfulness; conviction that results in loyalty and obedience.",
+    "usage": "Often paired with grace to describe the believer's response to God's saving initiative.",
+    "references": ["Hebrews 11", "Galatians 2:20", "Romans 5:1"],
+    "metadata": {"part_of_speech": "noun feminine"}
+  }
+]

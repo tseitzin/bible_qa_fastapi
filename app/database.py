@@ -1,9 +1,13 @@
 """Database connection and operations."""
+import json
+import logging
+from contextlib import contextmanager
+from typing import Any, List, Optional
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from contextlib import contextmanager
+
 from app.config import get_settings
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -397,3 +401,276 @@ class RecentQuestionsRepository:
                 deleted = cur.rowcount > 0
                 conn.commit()
                 return deleted
+
+
+class UserNotesRepository:
+    """Repository for storing and retrieving user-authored study notes."""
+
+    @staticmethod
+    def create_note(
+        user_id: int,
+        content: str,
+        question_id: int | None = None,
+        metadata: dict | None = None,
+        source: str | None = None,
+    ) -> dict:
+        """Persist a note linked to an optional question reference."""
+        metadata_json = json.dumps(metadata) if metadata is not None else None
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO user_notes (user_id, question_id, content, metadata, source)
+                    VALUES (%s, %s, %s, %s::jsonb, %s)
+                    RETURNING id, user_id, question_id, content, metadata, source, created_at, updated_at
+                    """,
+                    (user_id, question_id, content, metadata_json, source),
+                )
+                note = cur.fetchone()
+                conn.commit()
+                if note and isinstance(note.get("metadata"), str):
+                    note["metadata"] = json.loads(note["metadata"])
+                return note
+
+    @staticmethod
+    def list_notes(user_id: int, question_id: int | None = None, limit: int = 50) -> list:
+        """Return notes for a user filtered by question when provided."""
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                query = [
+                    "SELECT id, user_id, question_id, content, metadata, source, created_at, updated_at",
+                    "FROM user_notes",
+                    "WHERE user_id = %s",
+                ]
+                params: list[Any] = [user_id]
+
+                if question_id is not None:
+                    query.append("AND question_id = %s")
+                    params.append(question_id)
+
+                query.append("ORDER BY created_at DESC LIMIT %s")
+                params.append(limit)
+
+                cur.execute("\n".join(query), tuple(params))
+                rows = cur.fetchall()
+                for row in rows:
+                    if isinstance(row.get("metadata"), str):
+                        row["metadata"] = json.loads(row["metadata"])
+                return rows
+
+
+class CrossReferenceRepository:
+    """Read-only access to Treasury of Scripture Knowledge cross references."""
+
+    @staticmethod
+    def get_cross_references(book: str, chapter: int, verse: int) -> List[dict[str, Any]]:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT reference_data
+                    FROM cross_references
+                    WHERE LOWER(book) = LOWER(%s)
+                      AND chapter = %s
+                      AND verse = %s
+                    LIMIT 1
+                    """,
+                    (book, chapter, verse),
+                )
+                row = cur.fetchone()
+                data = row["reference_data"] if row else []
+                if isinstance(data, str):
+                    return json.loads(data)
+                return data
+
+
+class LexiconRepository:
+    """Repository for lexical lookup data (Strong's style)."""
+
+    @staticmethod
+    def get_entry(strongs_number: Optional[str] = None, lemma: Optional[str] = None) -> Optional[dict[str, Any]]:
+        if not strongs_number and not lemma:
+            return None
+
+        query = [
+            "SELECT strongs_number, lemma, transliteration, pronunciation, language, definition, usage, reference_list, metadata",
+            "FROM lexicon_entries",
+        ]
+        clauses: List[str] = []
+        params: List[Any] = []
+
+        if strongs_number:
+            clauses.append("LOWER(strongs_number) = LOWER(%s)")
+            params.append(strongs_number)
+
+        if lemma:
+            clauses.append("lemma ILIKE %s")
+            params.append(f"%{lemma}%")
+
+        if clauses:
+            query.append("WHERE " + " AND ".join(clauses))
+
+        query.append("ORDER BY created_at ASC LIMIT 1")
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("\n".join(query), tuple(params))
+                row = cur.fetchone()
+                if not row:
+                    return None
+
+                references = row.pop("reference_list", [])
+                metadata = row.get("metadata")
+                if isinstance(references, str):
+                    references = json.loads(references)
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+                    row["metadata"] = metadata
+                row["references"] = references
+                return row
+
+
+class TopicIndexRepository:
+    """Repository for topical Bible study entries."""
+
+    @staticmethod
+    def search_topics(keyword: Optional[str] = None, limit: int = 10) -> List[dict[str, Any]]:
+        pattern = f"%{keyword}%" if keyword else "%"
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT topic, summary, keywords, reference_entries
+                    FROM topic_index
+                    WHERE topic ILIKE %s
+                       OR summary ILIKE %s
+                       OR EXISTS (
+                            SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE %s
+                       )
+                    ORDER BY topic ASC
+                    LIMIT %s
+                    """,
+                    (pattern, pattern, pattern, limit),
+                )
+                rows = cur.fetchall()
+                for row in rows:
+                    keywords = row.get("keywords")
+                    if keywords is None:
+                        row["keywords"] = []
+                    else:
+                        row["keywords"] = list(keywords)
+                    references = row.pop("reference_entries", [])
+                    if isinstance(references, str):
+                        references = json.loads(references)
+                    row["references"] = references
+                return rows
+
+
+class ReadingPlanRepository:
+    """Repository backing curated reading plans."""
+
+    @staticmethod
+    def list_plans() -> List[dict[str, Any]]:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, slug, name, description, duration_days, metadata
+                    FROM reading_plans
+                    ORDER BY name ASC
+                    """
+                )
+                rows = cur.fetchall()
+                for row in rows:
+                    metadata = row.get("metadata")
+                    if isinstance(metadata, str):
+                        row["metadata"] = json.loads(metadata)
+                return rows
+
+    @staticmethod
+    def get_plan_by_slug(slug: str) -> Optional[dict[str, Any]]:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, slug, name, description, duration_days, metadata
+                    FROM reading_plans
+                    WHERE LOWER(slug) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (slug,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                metadata = row.get("metadata")
+                if isinstance(metadata, str):
+                    row["metadata"] = json.loads(metadata)
+                return row
+
+    @staticmethod
+    def get_plan_schedule(plan_id: int, max_days: Optional[int] = None) -> List[dict[str, Any]]:
+        params: List[Any] = [plan_id]
+        query = [
+            "SELECT day_number, title, passage, notes, metadata",
+            "FROM reading_plan_entries",
+            "WHERE plan_id = %s",
+            "ORDER BY day_number ASC",
+        ]
+        if max_days is not None:
+            query.append("LIMIT %s")
+            params.append(max_days)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("\n".join(query), tuple(params))
+                rows = cur.fetchall()
+                for row in rows:
+                    metadata = row.get("metadata")
+                    if isinstance(metadata, str):
+                        row["metadata"] = json.loads(metadata)
+                return rows
+
+
+class DevotionalTemplateRepository:
+    """Repository for devotional scaffolding templates."""
+
+    @staticmethod
+    def list_templates() -> List[dict[str, Any]]:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT slug, title, body, prompt_1, prompt_2, default_passage, metadata
+                    FROM devotional_templates
+                    ORDER BY title ASC
+                    """
+                )
+                rows = cur.fetchall()
+                for row in rows:
+                    metadata = row.get("metadata")
+                    if isinstance(metadata, str):
+                        row["metadata"] = json.loads(metadata)
+                return rows
+
+    @staticmethod
+    def get_template(slug: str) -> Optional[dict[str, Any]]:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT slug, title, body, prompt_1, prompt_2, default_passage, metadata
+                    FROM devotional_templates
+                    WHERE LOWER(slug) = LOWER(%s)
+                    LIMIT 1
+                    """,
+                    (slug,),
+                )
+                template = cur.fetchone()
+                if not template:
+                    return None
+                metadata = template.get("metadata")
+                if isinstance(metadata, str):
+                    template["metadata"] = json.loads(metadata)
+                return template

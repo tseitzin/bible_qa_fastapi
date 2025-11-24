@@ -9,6 +9,12 @@ from app.database import (
     QuestionRepository,
     SavedAnswersRepository,
     RecentQuestionsRepository,
+    UserNotesRepository,
+    CrossReferenceRepository,
+    LexiconRepository,
+    TopicIndexRepository,
+    ReadingPlanRepository,
+    DevotionalTemplateRepository,
 )
 
 
@@ -386,6 +392,154 @@ class TestSavedAnswersRepository:
         tags = SavedAnswersRepository.get_user_tags(1)
         assert tags == ["Faith", "Hope"]
 
+
+    class TestStudyResourceRepositories:
+        """Tests covering repositories that back the study resources API."""
+
+        @patch('app.database.get_db_connection')
+        def test_cross_reference_repository_returns_data(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchone.return_value = {
+                "reference_data": '[{"reference": "Romans 5:8", "note": "Love"}]'
+            }
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            entries = CrossReferenceRepository.get_cross_references("John", 3, 16)
+            assert entries[0]["reference"] == "Romans 5:8"
+
+        @patch('app.database.get_db_connection')
+        def test_lexicon_repository_get_entry_by_strongs(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchone.return_value = {
+                "strongs_number": "G26",
+                "lemma": "agape",
+                "transliteration": "agape",
+                "pronunciation": "ag-ah-pay",
+                "language": "Greek",
+                "definition": "love",
+                "usage": "",
+                "reference_list": '["John 3:16"]',
+                "metadata": '{"part_of_speech": "noun"}',
+            }
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            entry = LexiconRepository.get_entry(strongs_number="G26")
+            assert entry["references"] == ["John 3:16"]
+            assert entry["metadata"]["part_of_speech"] == "noun"
+
+        @patch('app.database.get_db_connection')
+        def test_topic_index_repository_search_parses_keywords(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = [
+                {
+                    "topic": "Faith",
+                    "summary": "",
+                    "keywords": ("faith", "trust"),
+                    "reference_entries": '[{"passage": "Hebrews 11"}]',
+                }
+            ]
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            results = TopicIndexRepository.search_topics("faith")
+            assert results[0]["keywords"] == ["faith", "trust"]
+            assert results[0]["references"][0]["passage"] == "Hebrews 11"
+
+        @patch('app.database.get_db_connection')
+        def test_reading_plan_repository_list_plans_casts_metadata(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = [
+                {
+                    "id": 1,
+                    "slug": "demo",
+                    "name": "Demo",
+                    "description": "",
+                    "duration_days": 30,
+                    "metadata": '{"level": "easy"}',
+                }
+            ]
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            plans = ReadingPlanRepository.list_plans()
+            assert plans[0]["metadata"]["level"] == "easy"
+
+        @patch('app.database.get_db_connection')
+        def test_reading_plan_repository_get_plan_schedule_casts_metadata(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = [
+                {
+                    "day_number": 1,
+                    "title": "Start",
+                    "passage": "John 1",
+                    "notes": None,
+                    "metadata": '{"theme": "love"}',
+                }
+            ]
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            schedule = ReadingPlanRepository.get_plan_schedule(1)
+            assert schedule[0]["metadata"]["theme"] == "love"
+
+        @patch('app.database.get_db_connection')
+        def test_devotional_template_repository_list_templates(self, mock_get_db_connection):
+            mock_cursor = Mock()
+            mock_cursor.fetchall.return_value = [
+                {
+                    "slug": "classic",
+                    "title": "Classic",
+                    "body": "{topic}",
+                    "prompt_1": "{topic}?",
+                    "prompt_2": "{topic}!",
+                    "default_passage": "John 15",
+                    "metadata": '{"tone": "reflective"}',
+                }
+            ]
+            mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+            mock_cursor.__exit__ = Mock(return_value=None)
+
+            mock_conn = Mock()
+            mock_conn.cursor.return_value = mock_cursor
+
+            mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+            mock_get_db_connection.return_value.__exit__.return_value = None
+
+            templates = DevotionalTemplateRepository.list_templates()
+            assert templates[0]["metadata"]["tone"] == "reflective"
+
     @patch('app.database.QuestionRepository.get_conversation_thread', return_value=[{"id": 5}])
     @patch('app.database.get_db_connection')
     def test_search_saved_answers_by_tag(self, mock_get_db_connection, mock_thread):
@@ -559,6 +713,73 @@ class TestRecentQuestionsRepository:
         deleted = RecentQuestionsRepository.delete_recent_question(1, 99)
         assert deleted is True
         mock_conn.commit.assert_called_once()
+
+
+class TestUserNotesRepository:
+    """Tests for the UserNotesRepository."""
+
+    @patch('app.database.get_db_connection')
+    def test_create_note_persists_metadata(self, mock_get_db_connection):
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = {
+            "id": 3,
+            "user_id": 1,
+            "question_id": 2,
+            "content": "Remember John 3:16",
+            "metadata": {"verses": ["John 3:16"]},
+            "source": "mcp",
+            "created_at": "ts",
+            "updated_at": "ts",
+        }
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+
+        mock_conn = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+        mock_get_db_connection.return_value.__exit__.return_value = None
+
+        note = UserNotesRepository.create_note(
+            user_id=1,
+            question_id=2,
+            content="Remember John 3:16",
+            metadata={"verses": ["John 3:16"]},
+            source="test",
+        )
+
+        mock_cursor.execute.assert_called_once()
+        mock_conn.commit.assert_called_once()
+        assert note["id"] == 3
+
+    @patch('app.database.get_db_connection')
+    def test_list_notes_casts_metadata(self, mock_get_db_connection):
+        mock_cursor = Mock()
+        mock_cursor.fetchall.return_value = [
+            {
+                "id": 1,
+                "user_id": 1,
+                "question_id": None,
+                "content": "Note",
+                "metadata": '{"verses":["John 3:16"]}',
+                "source": "mcp",
+                "created_at": "ts",
+                "updated_at": "ts",
+            }
+        ]
+        mock_cursor.__enter__ = Mock(return_value=mock_cursor)
+        mock_cursor.__exit__ = Mock(return_value=None)
+
+        mock_conn = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_get_db_connection.return_value.__enter__.return_value = mock_conn
+        mock_get_db_connection.return_value.__exit__.return_value = None
+
+        notes = UserNotesRepository.list_notes(user_id=1, question_id=None, limit=5)
+
+        mock_cursor.execute.assert_called_once()
+        assert notes[0]["metadata"]["verses"] == ["John 3:16"]
 
     @patch('app.database.get_db_connection')
     def test_delete_recent_question_not_found(self, mock_get_db_connection):

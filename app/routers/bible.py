@@ -1,7 +1,7 @@
 """API routes for Bible verse retrieval."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.schemas import BibleVerseResponse
+from app.models.schemas import BibleVerseResponse, BiblePassageResponse
 from app.services.bible_service import BibleService, get_bible_service
 from app.utils.exceptions import ValidationError
 
@@ -39,3 +39,19 @@ async def fetch_bible_verse_legacy(
 ):
     """Legacy route alias for backward compatibility."""
     return await _fetch_bible_verse(ref, service)
+
+
+@router.get("/bible/passage", response_model=BiblePassageResponse)
+async def fetch_bible_passage(
+    reference: str = Query(..., min_length=3, description="Reference like 'John 3:16-18' or 'Psalm 23'"),
+    service: BibleService = Depends(get_bible_service),
+):
+    try:
+        passage = service.get_passage_by_reference(reference)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.detail) from exc
+
+    if passage is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Passage not found")
+
+    return passage
