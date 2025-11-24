@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "classic",
+    "title": "{topic}: Anchoring Truth",
+    "body": "Reflect on {topic} by reading {passage}. Note what the passage reveals about God's character, humanity's need, and Jesus' provision.",
+    "prompt_1": "Where do you see {topic} affirmed or challenged in this passage?",
+    "prompt_2": "How will you practice {topic} in tangible rhythms this week?",
+    "default_passage": "Colossians 1:15-23",
+    "metadata": {"tone": "reflective"}
+  },
+  {
+    "slug": "story-format",
+    "title": "Tracing {topic} Through Scripture",
+    "body": "Summarize the passage, identify a gospel connection, and end with a prayer of surrender about {topic}.",
+    "prompt_1": "What story or image best captures today's insight on {topic}?",
+    "prompt_2": "Who could you encourage with this truth today?",
+    "default_passage": "John 15:1-11",
+    "metadata": {"tone": "narrative"}
+  }
+]

@@ -13,7 +13,8 @@ from app.models.schemas import (
 from app.services.question_service import QuestionService
 from app.utils.exceptions import DatabaseError, OpenAIError
 from app.auth import get_current_user, get_current_user_optional
-from app.routers import auth, saved_answers, bible, recent_questions
+from app.routers import auth, saved_answers, bible, recent_questions, study_resources
+from app.mcp.router import router as mcp_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +50,8 @@ app.include_router(auth.router)
 app.include_router(saved_answers.router)
 app.include_router(bible.router)
 app.include_router(recent_questions.router)
+app.include_router(study_resources.router)
+app.include_router(mcp_router)
 
 
 @app.get("/", response_model=HealthCheck)

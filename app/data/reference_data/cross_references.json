@@ -1,0 +1,32 @@
+[
+  {
+    "book": "John",
+    "chapter": 3,
+    "verse": 16,
+    "references": [
+      {"reference": "Romans 5:8", "note": "Love demonstrated at the cross."},
+      {"reference": "1 John 4:9-10", "note": "Parallel description of God's initiating love."},
+      {"reference": "Isaiah 53:5", "note": "Prophetic picture of the sacrifice promised."}
+    ]
+  },
+  {
+    "book": "Psalm",
+    "chapter": 23,
+    "verse": 1,
+    "references": [
+      {"reference": "John 10:11", "note": "Jesus picks up the Good Shepherd metaphor."},
+      {"reference": "Ezekiel 34:11-16", "note": "Shepherd imagery applied to the Lord's care."},
+      {"reference": "Philippians 4:19", "note": "Provision tied to God's character."}
+    ]
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verse": 28,
+    "references": [
+      {"reference": "Genesis 50:20", "note": "Joseph testifies to God's redemptive intent."},
+      {"reference": "Ephesians 1:11", "note": "Purposefulness woven through salvation history."},
+      {"reference": "James 1:2-4", "note": "Trials mature believers who stay surrendered."}
+    ]
+  }
+]

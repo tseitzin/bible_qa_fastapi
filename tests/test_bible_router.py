@@ -70,3 +70,54 @@ def test_fetch_bible_verse_invalid_reference():
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid reference format"
+
+
+def test_fetch_bible_passage_success():
+    def override_service():
+        mock_service = Mock()
+        mock_service.get_passage_by_reference.return_value = {
+            "reference": "John 3:16-17",
+            "book": "John",
+            "chapter": 3,
+            "start_verse": 16,
+            "end_verse": 17,
+            "verses": [
+                {"reference": "John 3:16", "book": "John", "chapter": 3, "verse": 16, "text": "sample"}
+            ],
+        }
+        return mock_service
+
+    app.dependency_overrides[bible.get_bible_service] = override_service
+
+    response = client.get("/api/bible/passage", params={"reference": "John 3:16-17"})
+
+    assert response.status_code == 200
+    assert response.json()["book"] == "John"
+
+
+def test_fetch_bible_passage_not_found():
+    def override_service():
+        mock_service = Mock()
+        mock_service.get_passage_by_reference.return_value = None
+        return mock_service
+
+    app.dependency_overrides[bible.get_bible_service] = override_service
+
+    response = client.get("/api/bible/passage", params={"reference": "John 3:99"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Passage not found"
+
+
+def test_fetch_bible_passage_invalid_reference():
+    def override_service():
+        mock_service = Mock()
+        mock_service.get_passage_by_reference.side_effect = ValidationError("bad reference")
+        return mock_service
+
+    app.dependency_overrides[bible.get_bible_service] = override_service
+
+    response = client.get("/api/bible/passage", params={"reference": "bad"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "bad reference"
