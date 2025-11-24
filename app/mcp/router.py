@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -48,7 +48,7 @@ async def list_registered_tools(_: bool = Depends(_authorize_mcp)) -> MCPListToo
 async def invoke_tool(
     payload: MCPInvokeRequest,
     _: bool = Depends(_authorize_mcp),
-    current_user: dict | None = Depends(get_current_user_optional),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ) -> MCPInvokeResponse:
     """Invoke a registered tool with the provided arguments."""
     definition = get_tool_definition(payload.tool)
