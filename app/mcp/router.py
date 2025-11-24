@@ -44,12 +44,12 @@ async def list_registered_tools(_: bool = Depends(_authorize_mcp)) -> MCPListToo
     return MCPListToolsResponse(tools=list_tools())
 
 
-@router.post("/call", response_model=MCPInvokeResponse)
+@router.post("/call")
 async def invoke_tool(
     payload: MCPInvokeRequest,
     _: bool = Depends(_authorize_mcp),
     current_user: Optional[dict] = Depends(get_current_user_optional),
-) -> MCPInvokeResponse:
+):
     """Invoke a registered tool with the provided arguments."""
     definition = get_tool_definition(payload.tool)
     if not definition:
