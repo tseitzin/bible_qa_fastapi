@@ -14,7 +14,7 @@ from app.mcp.models import (
     MCPListToolsResponse,
 )
 from app.mcp.tool_registry import get_tool_definition, list_tools
-from app.auth import get_current_user_optional
+from app.auth import get_current_user_optional_dependency
 from app.utils.exceptions import ValidationError
 
 # Ensure all tools register themselves with the global registry.
@@ -48,7 +48,7 @@ async def list_registered_tools(_: bool = Depends(_authorize_mcp)) -> MCPListToo
 async def invoke_tool(
     payload: MCPInvokeRequest,
     _: bool = Depends(_authorize_mcp),
-    current_user: Optional[dict] = Depends(get_current_user_optional),
+    current_user: Optional[dict] = Depends(get_current_user_optional_dependency),
 ):
     """Invoke a registered tool with the provided arguments."""
     definition = get_tool_definition(payload.tool)
