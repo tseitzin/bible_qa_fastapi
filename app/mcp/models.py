@@ -33,9 +33,11 @@ class MCPInvokeRequest(BaseModel):
 class MCPInvokeResponse(BaseModel):
     """Standardized invocation response."""
 
+    model_config = {"arbitrary_types_allowed": True}
+
     tool: str
     success: bool = True
-    result: Optional[Any] = None
+    result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     usage: Optional[Dict[str, Any]] = None
 
