@@ -1,0 +1,366 @@
+Day,Old Testament,New Testament
+1,Genesis 1-3,Matthew 1
+2,Genesis 4-6,Matthew 2
+3,Genesis 7-9,Matthew 3
+4,Genesis 10-12,Matthew 4
+5,Genesis 13-15,Matthew 5
+6,Genesis 16-18,Matthew 6
+7,Genesis 19-21,Matthew 7
+8,Genesis 22-24,Matthew 8
+9,Genesis 25-27,Matthew 9
+10,Genesis 28-30,Matthew 10
+11,Genesis 31-33,Matthew 11
+12,Genesis 34-36,Matthew 12
+13,Genesis 37-39,Matthew 13
+14,Genesis 40-42,Matthew 14
+15,Genesis 43-45,Matthew 15
+16,Genesis 46-48,Matthew 16
+17,Genesis 49-50,Matthew 17
+18,Exodus 1-2,Matthew 18
+19,Exodus 3-4,Matthew 19
+20,Exodus 5-6,Matthew 20
+21,Exodus 7-8,Matthew 21
+22,Exodus 9-10,Matthew 22
+23,Exodus 11-12,Matthew 23
+24,Exodus 13-14,Matthew 24
+25,Exodus 15-16,Matthew 25
+26,Exodus 17-18,Matthew 26
+27,Exodus 19-20,Matthew 27
+28,Exodus 21-22,Matthew 28
+29,Exodus 23-24,Mark 1
+30,Exodus 25-26,Mark 2
+31,Exodus 27-28,Mark 3
+32,Exodus 29-30,Mark 4
+33,Exodus 31-32,Mark 5
+34,Exodus 33-34,Mark 6
+35,Exodus 35-36,Mark 7
+36,Exodus 37-38,Mark 8
+37,Exodus 39-40,Mark 9
+38,Leviticus 1-2,Mark 10
+39,Leviticus 3-4,Mark 11
+40,Leviticus 5-6,Mark 12
+41,Leviticus 7-8,Mark 13
+42,Leviticus 9-10,Mark 14
+43,Leviticus 11-12,Mark 15
+44,Leviticus 13-14,Mark 16
+45,Leviticus 15-16,Luke 1
+46,Leviticus 17-18,Luke 2
+47,Leviticus 19-20,Luke 3
+48,Leviticus 21-22,Luke 4
+49,Leviticus 23-24,Luke 5
+50,Leviticus 25-26,Luke 6
+51,Leviticus 27,Luke 7
+52,Numbers 1-2,Luke 8
+53,Numbers 3-4,Luke 9
+54,Numbers 5-6,Luke 10
+55,Numbers 7-8,Luke 11
+56,Numbers 9-10,Luke 12
+57,Numbers 11-12,Luke 13
+58,Numbers 13-14,Luke 14
+59,Numbers 15-16,Luke 15
+60,Numbers 17-18,Luke 16
+61,Numbers 19-20,Luke 17
+62,Numbers 21-22,Luke 18
+63,Numbers 23-24,Luke 19
+64,Numbers 25-26,Luke 20
+65,Numbers 27-28,Luke 21
+66,Numbers 29-30,Luke 22
+67,Numbers 31-32,Luke 23
+68,Numbers 33-34,Luke 24
+69,Numbers 35-36,John 1
+70,Deuteronomy 1-2,John 2
+71,Deuteronomy 3-4,John 3
+72,Deuteronomy 5-6,John 4
+73,Deuteronomy 7-8,John 5
+74,Deuteronomy 9-10,John 6
+75,Deuteronomy 11-12,John 7
+76,Deuteronomy 13-14,John 8
+77,Deuteronomy 15-16,John 9
+78,Deuteronomy 17-18,John 10
+79,Deuteronomy 19-20,John 11
+80,Deuteronomy 21-22,John 12
+81,Deuteronomy 23-24,John 13
+82,Deuteronomy 25-26,John 14
+83,Deuteronomy 27-28,John 15
+84,Deuteronomy 29-30,John 16
+85,Deuteronomy 31-32,John 17
+86,Deuteronomy 33-34,John 18
+87,Joshua 1-2,John 19
+88,Joshua 3-4,John 20
+89,Joshua 5-6,John 21
+90,Joshua 7-8,Acts 1
+91,Joshua 9-10,Acts 2
+92,Joshua 11-12,Acts 3
+93,Joshua 13-14,Acts 4
+94,Joshua 15-16,Acts 5
+95,Joshua 17-18,Acts 6
+96,Joshua 19-20,Acts 7
+97,Joshua 21-22,Acts 8
+98,Joshua 23-24,Acts 9
+99,Judges 1-2,Acts 10
+100,Judges 3-4,Acts 11
+101,Judges 5-6,Acts 12
+102,Judges 7-8,Acts 13
+103,Judges 9-10,Acts 14
+104,Judges 11-12,Acts 15
+105,Judges 13-14,Acts 16
+106,Judges 15-16,Acts 17
+107,Judges 17-18,Acts 18
+108,Judges 19-21,Acts 19
+109,Ruth 1-4,Acts 20
+110,1 Samuel 1-2,Acts 21
+111,1 Samuel 3-4,Acts 22
+112,1 Samuel 5-7,Acts 23
+113,1 Samuel 8-9,Acts 24
+114,1 Samuel 10-11,Acts 25
+115,1 Samuel 12-13,Acts 26
+116,1 Samuel 14-15,Acts 27
+117,1 Samuel 16-17,Acts 28
+118,1 Samuel 18-19,Romans 1
+119,1 Samuel 20-21,Romans 2
+120,1 Samuel 22-23,Romans 3
+121,1 Samuel 24-25,Romans 4
+122,1 Samuel 26-27,Romans 5
+123,1 Samuel 28-29,Romans 6
+124,1 Samuel 30-31,Romans 7
+125,2 Samuel 1-2,Romans 8
+126,2 Samuel 3-4,Romans 9
+127,2 Samuel 5-6,Romans 10
+128,2 Samuel 7-8,Romans 11
+129,2 Samuel 9-10,Romans 12
+130,2 Samuel 11-12,Romans 13
+131,2 Samuel 13-14,Romans 14
+132,2 Samuel 15-16,Romans 15
+133,2 Samuel 17-18,Romans 16
+134,2 Samuel 19-20,1 Corinthians 1
+135,2 Samuel 21-22,1 Corinthians 2
+136,2 Samuel 23-24,1 Corinthians 3
+137,1 Kings 1-2,1 Corinthians 4
+138,1 Kings 3-4,1 Corinthians 5
+139,1 Kings 5-6,1 Corinthians 6
+140,1 Kings 7-8,1 Corinthians 7
+141,1 Kings 9-10,1 Corinthians 8
+142,1 Kings 11-12,1 Corinthians 9
+143,1 Kings 13-14,1 Corinthians 10
+144,1 Kings 15-16,1 Corinthians 11
+145,1 Kings 17-18,1 Corinthians 12
+146,1 Kings 19-20,1 Corinthians 13
+147,1 Kings 21-22,1 Corinthians 14
+148,2 Kings 1-2,1 Corinthians 15
+149,2 Kings 3-4,1 Corinthians 16
+150,2 Kings 5-6,2 Corinthians 1
+151,2 Kings 7-8,2 Corinthians 2
+152,2 Kings 9-10,2 Corinthians 3
+153,2 Kings 11-12,2 Corinthians 4
+154,2 Kings 13-14,2 Corinthians 5
+155,2 Kings 15-16,2 Corinthians 6
+156,2 Kings 17-18,2 Corinthians 7
+157,2 Kings 19-20,2 Corinthians 8
+158,2 Kings 21-22,2 Corinthians 9
+159,2 Kings 23-24,2 Corinthians 10
+160,2 Kings 24-25,2 Corinthians 11
+161,1 Chronicles 1-2,2 Corinthians 12
+162,1 Chronicles 3-4,2 Corinthians 13
+163,1 Chronicles 5-6,Galatians 1
+164,1 Chronicles 7-8,Galatians 2
+165,1 Chronicles 9-10,Galatians 3
+166,1 Chronicles 11-12,Galatians 4
+167,1 Chronicles 13-14,Galatians 5
+168,1 Chronicles 15-16,Galatians 6
+169,1 Chronicles 17-18,Ephesians 1
+170,1 Chronicles 19-20,Ephesians 2
+171,1 Chronicles 21-22,Ephesians 3
+172,1 Chronicles 23-24,Ephesians 4
+173,1 Chronicles 25-26,Ephesians 5
+174,1 Chronicles 27-29,Ephesians 6
+175,2 Chronicles 1-2,Philippians 1
+176,2 Chronicles 3-4,Philippians 2
+177,2 Chronicles 5-6,Philippians 3
+178,2 Chronicles 7-8,Philippians 4
+179,2 Chronicles 9-10,Colossians 1
+180,2 Chronicles 11-12,Colossians 2
+181,2 Chronicles 13-14,Colossians 3
+182,2 Chronicles 15-16,Colossians 4
+183,2 Chronicles 17-18,1 Thessalonians 1
+184,2 Chronicles 19-20,1 Thessalonians 2
+185,2 Chronicles 21-22,1 Thessalonians 3
+186,2 Chronicles 23-24,1 Thessalonians 4
+187,2 Chronicles 25-26,1 Thessalonians 5
+188,2 Chronicles 27-28,2 Thessalonians 1
+189,2 Chronicles 29-30,2 Thessalonians 2
+190,2 Chronicles 31-32,2 Thessalonians 3
+191,2 Chronicles 33-34,1 Timothy 1
+192,2 Chronicles 35-36,1 Timothy 2
+193,Ezra 1-2,1 Timothy 3
+194,Ezra 3-4,1 Timothy 4
+195,Ezra 5-6,1 Timothy 5
+196,Ezra 7-8,1 Timothy 6
+197,Ezra 9-10,2 Timothy 1
+198,Nehemiah 1-2,2 Timothy 2
+199,Nehemiah 3-4,2 Timothy 3
+200,Nehemiah 5-6,2 Timothy 4
+201,Nehemiah 7-8,Titus 1
+202,Nehemiah 9-10,Titus 2
+203,Nehemiah 11-12,Titus 3
+204,Nehemiah 13,Philemon
+205,Esther 1-2,Hebrews 1
+206,Esther 3-4,Hebrews 2
+207,Esther 5-7,Hebrews 3
+208,Esther 8-10,Hebrews 4
+209,Job 1-2,Hebrews 5
+210,Job 3-4,Hebrews 6
+211,Job 5-7,Hebrews 7
+212,Job 8-10,Hebrews 8
+213,Job 11-13,Hebrews 9
+214,Job 14-16,Hebrews 10
+215,Job 17-19,Hebrews 11
+216,Job 20-22,Hebrews 12
+217,Job 23-25,Hebrews 13
+218,Job 26-28,James 1
+219,Job 29-31,James 2
+220,Job 32-34,James 3
+221,Job 35-37,James 4
+222,Job 38-40,James 5
+223,Job 41-42,1 Peter 1
+224,Psalms 1-3,1 Peter 2
+225,Psalms 4-6,1 Peter 3
+226,Psalms 7-9,1 Peter 4
+227,Psalms 10-12,1 Peter 5
+228,Psalms 13-15,2 Peter 1
+229,Psalms 16-18,2 Peter 2
+230,Psalms 19-21,2 Peter 3
+231,Psalms 22-24,1 John 1
+232,Psalms 25-27,1 John 2
+233,Psalms 28-30,1 John 3
+234,Psalms 31-33,1 John 4
+235,Psalms 34-36,1 John 5
+236,Psalms 37-39,2 John
+237,Psalms 40-42,3 John
+238,Psalms 43-45,Jude
+239,Psalms 46-48,Revelation 1
+240,Psalms 49-51,Revelation 2
+241,Psalms 52-54,Revelation 3
+242,Psalms 55-57,Revelation 4
+243,Psalms 58-60,Revelation 5
+244,Psalms 61-63,Revelation 6
+245,Psalms 64-66,Revelation 7
+246,Psalms 67-69,Revelation 8
+247,Psalms 70-72,Revelation 9
+248,Psalms 73-75,Revelation 10
+249,Psalms 76-78,Revelation 11
+250,Psalms 79-81,Revelation 12
+251,Psalms 82-84,Revelation 13
+252,Psalms 85-87,Revelation 14
+253,Psalms 88-90,Revelation 15
+254,Psalms 91-93,Revelation 16
+255,Psalms 94-96,Revelation 17
+256,Psalms 97-99,Revelation 18
+257,Psalms 100-102,Revelation 19
+258,Psalms 103-105,Revelation 20
+259,Psalms 106-108,Revelation 21
+260,Psalms 109-111,Revelation 22
+261,Psalms 112-114,
+262,Psalms 115-117,
+263,Psalms 118-120,
+264,Psalms 121-123,
+265,Psalms 124-126,
+266,Psalms 127-129,
+267,Psalms 130-132,
+268,Psalms 133-135,
+269,Psalms 136-138,
+270,Psalms 139-141,
+271,Psalms 142-144,
+272,Psalms 145-147,
+273,Psalms 148-150,
+274,Proverbs 1-2,
+275,Proverbs 3-4,
+276,Proverbs 5-6,
+277,Proverbs 7-8,
+278,Proverbs 9-10,
+279,Proverbs 11-12,
+280,Proverbs 13-14,
+281,Proverbs 15-16,
+282,Proverbs 17-18,
+283,Proverbs 19-20,
+284,Proverbs 21-22,
+285,Proverbs 23-24,
+286,Proverbs 25-26,
+287,Proverbs 27-28,
+288,Proverbs 29-31,
+289,Ecclesiastes 1-2,
+290,Ecclesiastes 3-4,
+291,Ecclesiastes 5-6,
+292,Ecclesiastes 7-8,
+293,Ecclesiastes 9-10,
+294,Ecclesiastes 11-12,
+295,Song of Solomon 1-2,
+296,Song of Solomon 3-4,
+297,Song of Solomon 5-6,
+298,Song of Solomon 7-8,
+299,Isaiah 1-2,
+300,Isaiah 3-4,
+301,Isaiah 5-6,
+302,Isaiah 7-8,
+303,Isaiah 9-10,
+304,Isaiah 11-12,
+305,Isaiah 13-14,
+306,Isaiah 15-16,
+307,Isaiah 17-18,
+308,Isaiah 19-20,
+309,Isaiah 21-22,
+310,Isaiah 23-24,
+311,Isaiah 25-26,
+312,Isaiah 27-28,
+313,Isaiah 29-30,
+314,Isaiah 31-32,
+315,Isaiah 33-34,
+316,Isaiah 35-36,
+317,Isaiah 37-38,
+318,Isaiah 39-40,
+319,Isaiah 41-42,
+320,Isaiah 43-44,
+321,Isaiah 45-46,
+322,Isaiah 47-48,
+323,Isaiah 49-50,
+324,Isaiah 51-52,
+325,Isaiah 53-54,
+326,Isaiah 55-56,
+327,Isaiah 57-58,
+328,Isaiah 59-60,
+329,Isaiah 61-62,
+330,Isaiah 63-64,
+331,Isaiah 65-66,
+332,Jeremiah 1-2,
+333,Jeremiah 3-4,
+334,Jeremiah 5-6,
+335,Jeremiah 7-8,
+336,Jeremiah 9-10,
+337,Jeremiah 11-12,
+338,Jeremiah 13-14,
+339,Jeremiah 15-16,
+340,Jeremiah 17-18,
+341,Jeremiah 19-20,
+342,Jeremiah 21-22,
+343,Jeremiah 23-24,
+344,Jeremiah 25-26,
+345,Jeremiah 27-28,
+346,Jeremiah 29-30,
+347,Jeremiah 31-32,
+348,Jeremiah 33-34,
+349,Jeremiah 35-36,
+350,Jeremiah 37-38,
+351,Jeremiah 39-40,
+352,Jeremiah 41-42,
+353,Jeremiah 43-44,
+354,Jeremiah 45-46,
+355,Jeremiah 47-48,
+356,Jeremiah 49-50,
+357,Jeremiah 51-52,
+358,Lamentations 1-2,
+359,Lamentations 3-5,
+360,Ezekiel 1-2,
+361,Ezekiel 3-4,
+362,Ezekiel 5-6,
+363,Ezekiel 7-8,
+364,Ezekiel 9-10,
+365,Ezekiel 11-12,

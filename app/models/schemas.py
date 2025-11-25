@@ -209,6 +209,55 @@ class ReadingPlanDetailResponse(BaseModel):
     schedule: List[ReadingPlanScheduleItem]
 
 
+class UserReadingPlanCreate(BaseModel):
+    """Payload for starting a tracked reading plan."""
+    plan_slug: str = Field(..., min_length=2, description="Slug of the reading plan to track")
+    start_date: Optional[str] = Field(default=None, description="Optional ISO date to begin the plan")
+    nickname: Optional[str] = Field(default=None, max_length=100, description="Friendly label to distinguish this plan instance")
+
+
+class UserReadingPlanSummary(BaseModel):
+    """Summary of a tracked reading plan instance for a user."""
+    id: int
+    plan: ReadingPlanMeta
+    start_date: Optional[str] = None
+    nickname: Optional[str] = None
+    is_active: bool
+    created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    completed_days: int
+    total_days: int
+    percent_complete: float
+    next_day_number: Optional[int] = None
+
+
+class UserReadingPlanScheduleItem(ReadingPlanScheduleItem):
+    """Schedule entry annotated with user completion state."""
+    is_complete: bool = False
+    completed_at: Optional[str] = None
+
+
+class UserReadingPlanDetailResponse(UserReadingPlanSummary):
+    """Tracked reading plan detail including personalized schedule."""
+    schedule: List[UserReadingPlanScheduleItem]
+
+
+class ReadingPlanDayCompletionUpdate(BaseModel):
+    """Request body for toggling day completion."""
+    is_complete: bool = Field(..., description="Whether the day should be marked complete")
+
+
+class ReadingPlanDayCompletionStatus(BaseModel):
+    """Response summarizing completion action results."""
+    day_number: int
+    is_complete: bool
+    completed_at: Optional[str] = None
+    completed_days: int
+    total_days: int
+    percent_complete: float
+    plan_completed_at: Optional[str] = None
+
+
 class DevotionalTemplate(BaseModel):
     """Template metadata for devotional generation."""
     slug: str
