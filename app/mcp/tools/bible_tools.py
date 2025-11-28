@@ -75,7 +75,7 @@ def _register_scripture_tools() -> None:
                 "type": "object",
                 "properties": {
                     "keyword": {"type": "string", "minLength": 2},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 500, "default": 20},
                 },
                 "required": ["keyword"],
             },

@@ -490,7 +490,7 @@ class BibleService:
             raise ValidationError("Search keyword cannot be empty")
 
         limit_value = self._validate_positive_int(limit, "limit")
-        limit_value = min(limit_value, 100)
+        limit_value = min(limit_value, 500)
         term = f"%{keyword.strip()}%"
 
         try:
