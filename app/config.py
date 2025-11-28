@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # OpenAI Configuration
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-5-mini", env="OPENAI_MODEL")
-    openai_max_output_tokens: int = Field(default=900, env="OPENAI_MAX_OUTPUT_TOKENS")
+    openai_max_output_tokens: int = Field(default=2000, env="OPENAI_MAX_OUTPUT_TOKENS")
     openai_max_output_tokens_retry: int = Field(default=1500, env="OPENAI_MAX_OUTPUT_TOKENS_RETRY")
     openai_retry_on_truncation: bool = Field(default=True, env="OPENAI_RETRY_ON_TRUNCATION")
     openai_reasoning_effort: str = Field(default="low", env="OPENAI_REASONING_EFFORT")

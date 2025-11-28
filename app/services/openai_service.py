@@ -54,7 +54,7 @@ class OpenAIService:
         self.max_tokens = max(1, settings.openai_max_output_tokens)
         self.request_timeout = max(0, settings.openai_request_timeout)
         self.max_history_messages = max(0, settings.openai_max_history_messages)
-        self.max_tool_iterations = 10  # Prevent infinite loops
+        self.max_tool_iterations = 3  # Limit to 3 rounds - most questions only need 1-2
 
     async def get_bible_answer(
         self,
@@ -118,33 +118,47 @@ class OpenAIService:
             # If no tool calls, return the answer
             if not message.tool_calls:
                 content = message.content
+                finish_reason = response.choices[0].finish_reason
+                logger.info(f"OpenAI response (no tool calls): content={content}, finish_reason={finish_reason}")
+                
+                # Handle token limit reached
+                if finish_reason == "length" and not content:
+                    logger.warning("OpenAI hit token limit. This usually happens when the question is too broad.")
+                    raise OpenAIError("The answer requires too many verses to fit in one response. Please try asking a more specific question.")
+                
                 if not content:
+                    logger.error(f"Empty response from OpenAI. Full message: {message.model_dump()}")
                     raise OpenAIError("AI service returned an empty response")
                 return content.strip()
             
             # Add assistant's message with tool calls to history
             messages.append(message.model_dump())
             
-            # Execute each tool call
-            for tool_call in message.tool_calls:
+            # Execute tool calls in parallel for speed
+            async def execute_tool_async(tool_call):
                 tool_name = tool_call.function.name
                 tool_args = json.loads(tool_call.function.arguments)
                 
                 logger.info(f"Executing MCP tool: {tool_name} with args: {tool_args}")
                 
                 try:
-                    tool_result = execute_mcp_tool(tool_name, tool_args)
+                    tool_result = await asyncio.to_thread(execute_mcp_tool, tool_name, tool_args)
                     result_content = json.dumps(tool_result)
                 except Exception as e:
                     logger.error(f"Tool execution failed: {e}")
                     result_content = json.dumps({"error": str(e)})
                 
-                # Add tool result to messages
-                messages.append({
+                return {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "content": result_content
-                })
+                }
+            
+            # Execute all tool calls in parallel
+            tool_results = await asyncio.gather(*[execute_tool_async(tc) for tc in message.tool_calls])
+            
+            # Add all tool results to messages
+            messages.extend(tool_results)
         
         raise OpenAIError("Maximum tool iterations reached")
     
