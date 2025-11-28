@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     openai_max_output_tokens_retry: int = Field(default=1500, env="OPENAI_MAX_OUTPUT_TOKENS_RETRY")
     openai_retry_on_truncation: bool = Field(default=True, env="OPENAI_RETRY_ON_TRUNCATION")
     openai_reasoning_effort: str = Field(default="low", env="OPENAI_REASONING_EFFORT")
-    openai_request_timeout: int = Field(default=25, env="OPENAI_REQUEST_TIMEOUT")
+    openai_request_timeout: int = Field(default=60, env="OPENAI_REQUEST_TIMEOUT")
     openai_max_history_messages: int = Field(default=12, env="OPENAI_MAX_HISTORY_MESSAGES")
     
     # MCP Configuration
