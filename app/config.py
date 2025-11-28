@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     @property
     def csrf_exempt_paths(self) -> list[str]:
         """List of path prefixes that are exempt from CSRF validation."""
-        raw_paths = os.getenv("CSRF_EXEMPT_PATHS", "/api/auth/login,/api/auth/register")
+        raw_paths = os.getenv("CSRF_EXEMPT_PATHS", "/api/auth/login,/api/auth/register,/api/ask,/api/ask/followup")
         return [path.strip() for path in raw_paths.split(",") if path.strip()]
     
     @property
