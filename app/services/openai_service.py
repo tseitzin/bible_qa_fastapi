@@ -100,7 +100,7 @@ class OpenAIService:
             kwargs = {
                 "model": self.model,
                 "messages": messages,
-                "max_tokens": self.max_tokens,
+                "max_completion_tokens": self.max_tokens,
             }
             
             if tools:
