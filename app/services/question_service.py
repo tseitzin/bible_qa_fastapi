@@ -1,5 +1,6 @@
 """Business logic for question handling."""
 from app.services.openai_service import OpenAIService
+from app.services.cache_service import CacheService
 from app.database import QuestionRepository, RecentQuestionsRepository
 from app.models.schemas import (
     QuestionRequest, QuestionResponse, FollowUpQuestionRequest,
@@ -20,6 +21,23 @@ class QuestionService:
     async def process_question(self, request: QuestionRequest, record_recent: bool = False) -> QuestionResponse:
         """Process a question through the complete pipeline."""
         try:
+            # Check cache first for identical questions
+            cached_answer = CacheService.get_question(request.question)
+            if cached_answer:
+                logger.info(f"Cache hit for question: {request.question[:50]}...")
+                # Still store in database for history
+                is_biblical = self.openai_service.is_biblical_answer(cached_answer)
+                question_id = self.question_repo.create_question(
+                    user_id=request.user_id,
+                    question=request.question
+                )
+                self.question_repo.create_answer(question_id, cached_answer)
+                
+                if record_recent and is_biblical:
+                    RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+                
+                return QuestionResponse(answer=cached_answer, question_id=question_id, is_biblical=is_biblical)
+            
             # Get AI answer
             answer = await self.openai_service.get_bible_answer(request.question)
             
@@ -32,6 +50,10 @@ class QuestionService:
             )
             
             self.question_repo.create_answer(question_id, answer)
+            
+            # Cache the answer for future requests
+            if is_biblical:  # Only cache biblical answers
+                CacheService.set_question(request.question, answer)
 
             if record_recent and is_biblical:
                 RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
@@ -51,6 +73,24 @@ class QuestionService:
                 for msg in request.conversation_history
             ]
             
+            # Check cache for this question with context
+            cached_answer = CacheService.get_question(request.question, conversation_history)
+            if cached_answer:
+                logger.info(f"Cache hit for follow-up question: {request.question[:50]}...")
+                # Still store in database for history
+                is_biblical = self.openai_service.is_biblical_answer(cached_answer)
+                question_id = self.question_repo.create_question(
+                    user_id=request.user_id,
+                    question=request.question,
+                    parent_question_id=request.parent_question_id
+                )
+                self.question_repo.create_answer(question_id, cached_answer)
+                
+                if record_recent and is_biblical:
+                    RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+                
+                return QuestionResponse(answer=cached_answer, question_id=question_id, is_biblical=is_biblical)
+            
             # Get AI answer with context
             answer = await self.openai_service.get_bible_answer(
                 request.question,
@@ -67,6 +107,10 @@ class QuestionService:
             )
             
             self.question_repo.create_answer(question_id, answer)
+            
+            # Cache the answer for future requests with same context
+            if is_biblical:  # Only cache biblical answers
+                CacheService.set_question(request.question, answer, conversation_history)
 
             if record_recent and is_biblical:
                 RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
@@ -99,4 +143,66 @@ class QuestionService:
             
         except Exception as e:
             logger.error(f"Error getting user history: {e}")
+            raise
+    
+    async def stream_question(self, request: QuestionRequest, record_recent: bool = False):
+        """Stream a question response, checking cache first.
+        
+        Yields:
+            dict: Status updates and content chunks
+                  {"type": "cached", "answer": str} for cached responses
+                  {"type": "status", "message": str} for status updates
+                  {"type": "content", "text": str} for streaming content
+                  {"type": "done", "question_id": int} when complete
+        """
+        try:
+            # Check cache first
+            cached_answer = CacheService.get_question(request.question)
+            if cached_answer:
+                logger.info(f"Cache hit for streamed question: {request.question[:50]}...")
+                
+                # Return cached answer immediately (no streaming needed)
+                is_biblical = self.openai_service.is_biblical_answer(cached_answer)
+                question_id = self.question_repo.create_question(
+                    user_id=request.user_id,
+                    question=request.question
+                )
+                self.question_repo.create_answer(question_id, cached_answer)
+                
+                if record_recent and is_biblical:
+                    RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+                
+                # Yield complete cached response
+                yield {"type": "cached", "answer": cached_answer, "question_id": question_id, "is_biblical": is_biblical}
+                return
+            
+            # Stream from OpenAI
+            complete_answer = ""
+            async for chunk in self.openai_service.stream_bible_answer(request.question):
+                if chunk["type"] == "content":
+                    complete_answer += chunk["text"]
+                yield chunk
+            
+            # After streaming completes, save and cache
+            is_biblical = self.openai_service.is_biblical_answer(complete_answer)
+            
+            question_id = self.question_repo.create_question(
+                user_id=request.user_id,
+                question=request.question
+            )
+            self.question_repo.create_answer(question_id, complete_answer)
+            
+            # Cache the complete answer
+            if is_biblical:
+                CacheService.set_question(request.question, complete_answer)
+            
+            if record_recent and is_biblical:
+                RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+            
+            # Yield completion event
+            yield {"type": "done", "question_id": question_id, "is_biblical": is_biblical}
+            
+        except Exception as e:
+            logger.error(f"Error streaming question: {e}")
+            yield {"type": "error", "message": str(e)}
             raise

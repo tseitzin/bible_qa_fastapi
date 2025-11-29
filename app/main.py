@@ -3,10 +3,13 @@ from datetime import datetime
 from typing import Annotated, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+import json
 import logging
 
 from app.config import get_settings
+from app.database import initialize_connection_pool, close_connection_pool
+from app.services.cache_service import initialize_redis, close_redis
 from app.models.schemas import (
     QuestionRequest, QuestionResponse, FollowUpQuestionRequest,
     HistoryResponse, HealthCheck
@@ -48,6 +51,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources on application startup."""
+    logger.info("Initializing application resources...")
+    try:
+        # Initialize database connection pool
+        initialize_connection_pool(minconn=2, maxconn=20)
+        
+        # Initialize Redis cache
+        initialize_redis()
+        
+        logger.info("Application startup complete")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on application shutdown."""
+    logger.info("Shutting down application...")
+    try:
+        close_connection_pool()
+        close_redis()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
 
 # Initialize services
 question_service = QuestionService()
@@ -97,6 +129,55 @@ async def ask_question(
         raise
     except Exception as e:
         logger.error(f"Error processing question: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/ask/stream")
+async def ask_question_stream(
+    request: QuestionRequest,
+    current_user: OptionalCurrentUser
+):
+    """Submit a Bible-related question and get a streamed AI-generated answer.
+    
+    Returns Server-Sent Events (SSE) with the following event types:
+    - cached: Complete cached answer (instant)
+    - status: Status update during processing
+    - content: Streaming text chunks
+    - done: Processing complete with question_id
+    - error: Error occurred
+    """
+    try:
+        # Use authenticated user's ID if logged in, otherwise use default guest ID
+        if current_user:
+            request.user_id = current_user["id"]
+        else:
+            request.user_id = 1  # Guest user ID
+        
+        async def generate():
+            try:
+                async for chunk in question_service.stream_question(
+                    request,
+                    record_recent=bool(current_user)
+                ):
+                    # Format as Server-Sent Events
+                    yield f"data: {json.dumps(chunk)}\n\n"
+            except Exception as e:
+                logger.error(f"Error in stream: {e}")
+                yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+            }
+        )
+    except (DatabaseError, OpenAIError):
+        raise
+    except Exception as e:
+        logger.error(f"Error setting up stream: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

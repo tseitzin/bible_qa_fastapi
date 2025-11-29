@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import psycopg2
 
 from app.database import get_db_connection
+from app.services.cache_service import CacheService
 from app.utils.exceptions import DatabaseError, ValidationError
 
 LOGGER = logging.getLogger(__name__)
@@ -301,6 +302,12 @@ class BibleService:
 
     def get_verse(self, reference: str) -> Optional[dict]:
         """Retrieve a single verse by scripture reference string."""
+        # Check cache first
+        cached = CacheService.get_verse(reference)
+        if cached is not None:
+            LOGGER.debug(f"Cache hit for verse: {reference}")
+            return cached
+        
         book, chapter, verse = self._parse_reference(reference)
 
         try:
@@ -326,16 +333,27 @@ class BibleService:
             LOGGER.info("Verse not found for reference '%s'", reference)
             return None
 
-        return {
+        verse_data = {
             "reference": f"{result['book']} {result['chapter']}:{result['verse']}",
             "book": result["book"],
             "chapter": result["chapter"],
             "verse": result["verse"],
             "text": result["text"],
         }
+        
+        # Cache the result
+        CacheService.set_verse(reference, verse_data)
+        
+        return verse_data
 
     def get_passage(self, book: str, chapter: int, start_verse: int, end_verse: int) -> list[dict]:
         """Retrieve a contiguous set of verses within a chapter."""
+        # Check cache first
+        cached = CacheService.get_passage(book, chapter, start_verse, end_verse)
+        if cached is not None:
+            LOGGER.debug(f"Cache hit for passage: {book} {chapter}:{start_verse}-{end_verse}")
+            return cached
+        
         canonical_book = self._normalize_book_name(book)
         chapter_num = self._validate_positive_int(chapter, "chapter")
         start = self._validate_positive_int(start_verse, "start_verse")
@@ -370,7 +388,7 @@ class BibleService:
             )
             raise DatabaseError("Failed to retrieve passage from database") from exc
 
-        return [
+        passage_data = [
             {
                 "reference": f"{row['book']} {row['chapter']}:{row['verse']}",
                 "book": row["book"],
@@ -380,6 +398,11 @@ class BibleService:
             }
             for row in rows
         ]
+        
+        # Cache the result
+        CacheService.set_passage(book, chapter, start_verse, end_verse, passage_data)
+        
+        return passage_data
 
     def get_passage_by_reference(self, reference: str) -> Optional[dict]:
         """Resolve an arbitrary reference string into a passage payload."""
@@ -451,6 +474,12 @@ class BibleService:
 
     def get_chapter(self, book: str, chapter: int) -> Optional[dict]:
         """Retrieve an entire chapter."""
+        # Check cache first
+        cached = CacheService.get_chapter(book, chapter)
+        if cached is not None:
+            LOGGER.debug(f"Cache hit for chapter: {book} {chapter}")
+            return cached
+        
         canonical_book = self._normalize_book_name(book)
         chapter_num = self._validate_positive_int(chapter, "chapter")
 
@@ -475,7 +504,7 @@ class BibleService:
         if not verses:
             return None
 
-        return {
+        chapter_data = {
             "book": canonical_book,
             "chapter": chapter_num,
             "verses": [
@@ -483,12 +512,23 @@ class BibleService:
                 for row in verses
             ],
         }
+        
+        # Cache the result
+        CacheService.set_chapter(book, chapter, chapter_data)
+        
+        return chapter_data
 
     def search_verses(self, keyword: str, limit: int = 20) -> list[dict]:
         """Perform a lightweight text search across verses."""
         if not keyword or not keyword.strip():
             raise ValidationError("Search keyword cannot be empty")
 
+        # Check cache first
+        cached = CacheService.get_search(keyword, limit)
+        if cached is not None:
+            LOGGER.debug(f"Cache hit for search: {keyword} (limit={limit})")
+            return cached
+        
         limit_value = self._validate_positive_int(limit, "limit")
         limit_value = min(limit_value, 500)
         term = f"%{keyword.strip()}%"
@@ -511,7 +551,7 @@ class BibleService:
             LOGGER.error("Database error searching verses for '%s': %s", keyword, exc)
             raise DatabaseError("Failed to search verses") from exc
 
-        return [
+        results = [
             {
                 "reference": f"{row['book']} {row['chapter']}:{row['verse']}",
                 "book": row["book"],
@@ -521,6 +561,11 @@ class BibleService:
             }
             for row in matches
         ]
+        
+        # Cache the results
+        CacheService.set_search(keyword, limit, results)
+        
+        return results
 
     def list_books(self) -> list[dict]:
         """Return overview information for every Bible book present in the dataset."""

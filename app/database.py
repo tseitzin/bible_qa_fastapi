@@ -5,25 +5,90 @@ from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
 
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Global connection pool
+_connection_pool: Optional[pool.ThreadedConnectionPool] = None
 
-@contextmanager
-def get_db_connection():
-    """Context manager for database connections."""
+
+def initialize_connection_pool(minconn: int = 2, maxconn: int = 20) -> None:
+    """Initialize the database connection pool.
+    
+    Args:
+        minconn: Minimum number of connections to maintain
+        maxconn: Maximum number of connections allowed
+    """
+    global _connection_pool
+    
+    if _connection_pool is not None:
+        logger.warning("Connection pool already initialized")
+        return
+    
     settings = get_settings()
-    conn = None
+    db_config = settings.db_config
+    
     try:
-        # Use the db_config property which handles both Heroku and local configs
-        db_config = settings.db_config
-        conn = psycopg2.connect(
+        _connection_pool = pool.ThreadedConnectionPool(
+            minconn,
+            maxconn,
             cursor_factory=RealDictCursor,
             **db_config
         )
+        logger.info(f"Database connection pool initialized (min={minconn}, max={maxconn})")
+    except psycopg2.Error as e:
+        logger.error(f"Failed to initialize connection pool: {e}")
+        raise
+
+
+def close_connection_pool() -> None:
+    """Close all connections in the pool."""
+    global _connection_pool
+    
+    if _connection_pool is not None:
+        _connection_pool.closeall()
+        _connection_pool = None
+        logger.info("Database connection pool closed")
+
+
+@contextmanager
+def get_db_connection():
+    """Context manager for database connections from the pool.
+    
+    If the pool is not initialized, falls back to creating a direct connection.
+    """
+    global _connection_pool
+    
+    # Fallback to direct connection if pool not initialized
+    if _connection_pool is None:
+        logger.warning("Connection pool not initialized, using direct connection")
+        settings = get_settings()
+        conn = None
+        try:
+            db_config = settings.db_config
+            conn = psycopg2.connect(
+                cursor_factory=RealDictCursor,
+                **db_config
+            )
+            yield conn
+        except psycopg2.Error as e:
+            logger.error(f"Database error: {e}")
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if conn:
+                conn.close()
+        return
+    
+    # Use connection from pool
+    conn = None
+    try:
+        conn = _connection_pool.getconn()
         yield conn
     except psycopg2.Error as e:
         logger.error(f"Database error: {e}")
@@ -32,7 +97,7 @@ def get_db_connection():
         raise
     finally:
         if conn:
-            conn.close()
+            _connection_pool.putconn(conn)
 
 
 class QuestionRepository:

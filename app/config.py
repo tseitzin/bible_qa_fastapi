@@ -21,15 +21,22 @@ class Settings(BaseSettings):
     db_host: str = Field(default="localhost", env="DB_HOST")
     db_port: int = Field(default=5432, env="DB_PORT")
     
+    # Redis Configuration
+    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    cache_enabled: bool = Field(default=True, env="CACHE_ENABLED")
+    cache_ttl_verses: int = Field(default=0, env="CACHE_TTL_VERSES")  # 0 = no expiry
+    cache_ttl_questions: int = Field(default=86400, env="CACHE_TTL_QUESTIONS")  # 24 hours
+    cache_ttl_searches: int = Field(default=3600, env="CACHE_TTL_SEARCHES")  # 1 hour
+    
     # OpenAI Configuration
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", env="OPENAI_MODEL")
-    openai_max_output_tokens: int = Field(default=2000, env="OPENAI_MAX_OUTPUT_TOKENS")
-    openai_max_output_tokens_retry: int = Field(default=1500, env="OPENAI_MAX_OUTPUT_TOKENS_RETRY")
+    openai_max_output_tokens: int = Field(default=1500, env="OPENAI_MAX_OUTPUT_TOKENS")  # Reduced from 2000
+    openai_max_output_tokens_retry: int = Field(default=1200, env="OPENAI_MAX_OUTPUT_TOKENS_RETRY")  # Reduced from 1500
     openai_retry_on_truncation: bool = Field(default=True, env="OPENAI_RETRY_ON_TRUNCATION")
     openai_reasoning_effort: str = Field(default="low", env="OPENAI_REASONING_EFFORT")
-    openai_request_timeout: int = Field(default=60, env="OPENAI_REQUEST_TIMEOUT")
-    openai_max_history_messages: int = Field(default=12, env="OPENAI_MAX_HISTORY_MESSAGES")
+    openai_request_timeout: int = Field(default=45, env="OPENAI_REQUEST_TIMEOUT")  # Reduced from 60
+    openai_max_history_messages: int = Field(default=10, env="OPENAI_MAX_HISTORY_MESSAGES")  # Reduced from 12
     
     # MCP Configuration
     mcp_api_key: str = Field(default="", env="MCP_API_KEY")
