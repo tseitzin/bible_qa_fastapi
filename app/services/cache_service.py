@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import ssl
 from typing import Any, Optional
 
 import redis
@@ -30,17 +31,24 @@ def initialize_redis() -> None:
         return
     
     try:
+        # Configure SSL for Heroku Redis (uses self-signed certs)
+        ssl_params = {}
+        if settings.redis_url.startswith('rediss://'):
+            ssl_params['ssl_cert_reqs'] = ssl.CERT_NONE
+            ssl_params['ssl_check_hostname'] = False
+        
         _redis_client = redis.from_url(
             settings.redis_url,
             decode_responses=True,
             socket_connect_timeout=5,
             socket_timeout=5,
             retry_on_timeout=True,
-            health_check_interval=30
+            health_check_interval=30,
+            **ssl_params
         )
         # Test connection
         _redis_client.ping()
-        logger.info(f"Redis client initialized: {settings.redis_url}")
+        logger.info(f"Redis client initialized successfully")
     except RedisError as e:
         logger.error(f"Failed to initialize Redis client: {e}")
         _redis_client = None
