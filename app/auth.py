@@ -152,6 +152,7 @@ def _convert_user(row: Optional[dict]) -> Optional[dict]:
         "email": row["email"],
         "username": row["username"],
         "is_active": row["is_active"],
+        "is_admin": row.get("is_admin", False),
         "created_at": row["created_at"],
         **({"hashed_password": row["hashed_password"]} if "hashed_password" in row else {})
     }
@@ -162,7 +163,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, email, username, hashed_password, is_active, created_at FROM users WHERE email = %s",
+                "SELECT id, email, username, hashed_password, is_active, is_admin, created_at FROM users WHERE email = %s",
                 (email,)
             )
             return _convert_user(cur.fetchone())
@@ -173,7 +174,7 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, email, username, is_active, created_at FROM users WHERE id = %s",
+                "SELECT id, email, username, is_active, is_admin, created_at FROM users WHERE id = %s",
                 (user_id,)
             )
             return _convert_user(cur.fetchone())
@@ -186,15 +187,23 @@ def create_user(email: str, username: str, password: str) -> dict:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO users (email, username, hashed_password, is_active)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, email, username, is_active, created_at
+                INSERT INTO users (email, username, hashed_password, is_active, is_admin)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, email, username, is_active, is_admin, created_at
                 """,
-                (email, username, hashed_password, True)
+                (email, username, hashed_password, True, False)
             )
             user = cur.fetchone()
             conn.commit()
             return _convert_user(user)
+# Admin-only dependency for FastAPI endpoints
+from fastapi import Depends
+
+async def get_current_admin_user(current_user: dict = Depends(get_current_user_dependency)) -> dict:
+    """Require current user to be admin."""
+    if not current_user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    return current_user
 
 
 async def get_current_user(

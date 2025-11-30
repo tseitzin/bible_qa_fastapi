@@ -1,3 +1,38 @@
+from app.auth import get_current_admin_user
+from app.services.question_service import QuestionService
+from app.services.saved_answers_service import SavedAnswersService
+
+admin_question_service = QuestionService()
+admin_saved_answers_service = SavedAnswersService()
+
+
+# Admin-only: Delete a question
+@app.delete("/api/admin/questions/{question_id}")
+async def admin_delete_question(question_id: int, current_admin: dict = Depends(get_current_admin_user)):
+    """Delete a question by ID (admin only)."""
+    from app.database import QuestionRepository
+    try:
+        deleted = QuestionRepository.delete_question(question_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Question not found")
+        return {"status": "deleted", "question_id": question_id}
+    except Exception as e:
+        logger.error(f"Admin delete question error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Admin-only: Delete a saved answer
+@app.delete("/api/admin/saved_answers/{answer_id}")
+async def admin_delete_saved_answer(answer_id: int, current_admin: dict = Depends(get_current_admin_user)):
+    """Delete a saved answer by ID (admin only)."""
+    from app.database import SavedAnswersRepository
+    try:
+        deleted = SavedAnswersRepository.admin_delete_saved_answer(answer_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Saved answer not found")
+        return {"status": "deleted", "answer_id": answer_id}
+    except Exception as e:
+        logger.error(f"Admin delete saved answer error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 """Bible Q&A FastAPI Application."""
 from datetime import datetime
 from typing import Annotated, Optional, Dict, Any

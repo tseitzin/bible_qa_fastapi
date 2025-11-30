@@ -95,6 +95,7 @@ class UserCreate(BaseModel):
     email: EmailStr = Field(..., description="User's email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     password: str = Field(..., min_length=8, max_length=100, description="Password")
+    is_admin: bool = Field(default=False, description="Is this user an admin?")
 
 
 class UserLogin(BaseModel):
@@ -109,6 +110,7 @@ class User(BaseModel):
     email: str
     username: str
     is_active: bool
+    is_admin: bool
     created_at: datetime
 
 
