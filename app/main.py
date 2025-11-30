@@ -1,7 +1,7 @@
 """Bible Q&A FastAPI Application."""
 from datetime import datetime
 from typing import Annotated, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 import json
@@ -19,6 +19,7 @@ from app.utils.exceptions import DatabaseError, OpenAIError
 from app.auth import (
     get_current_user_dependency,
     get_current_user_optional_dependency,
+    get_or_create_guest_user,
 )
 from app.routers import auth, saved_answers, bible, recent_questions, study_resources, user_reading_plans, admin_api_logs, admin_users
 from app.middleware.csrf import CSRFMiddleware
@@ -103,6 +104,20 @@ CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user_dependency)]
 OptionalCurrentUser = Annotated[Optional[Dict[str, Any]], Depends(get_current_user_optional_dependency)]
 
 
+async def get_user_or_guest(request: Request, response: Response) -> Dict[str, Any]:
+    """Dependency to get authenticated user or create/retrieve guest user."""
+    # Try to get authenticated user first
+    user = await get_current_user_optional_dependency(request)
+    if user:
+        return user
+    
+    # Create or retrieve guest user
+    return await get_or_create_guest_user(request, response)
+
+
+UserOrGuest = Annotated[Dict[str, Any], Depends(get_user_or_guest)]
+
+
 @app.get("/", response_model=HealthCheck)
 async def health_check():
     """Health check endpoint."""
@@ -114,20 +129,20 @@ async def health_check():
 
 @app.post("/api/ask", response_model=QuestionResponse)
 async def ask_question(
-    request: QuestionRequest,
-    current_user: OptionalCurrentUser
+    question_request: QuestionRequest,
+    user: UserOrGuest
 ):
     """Submit a Bible-related question and get an AI-generated answer (guest or authenticated)."""
     try:
-        # Use authenticated user's ID if logged in, otherwise use default guest ID
-        if current_user:
-            request.user_id = current_user["id"]
-        else:
-            request.user_id = 1  # Guest user ID
+        # Set user ID from authenticated or guest user
+        question_request.user_id = user["id"]
+        
+        # Only record in recent questions for authenticated users (not guests)
+        is_authenticated = not user.get("is_guest", False)
         
         result = await question_service.process_question(
-            request,
-            record_recent=bool(current_user)
+            question_request,
+            record_recent=is_authenticated
         )
         return result
     except (DatabaseError, OpenAIError):
@@ -140,8 +155,8 @@ async def ask_question(
 
 @app.post("/api/ask/stream")
 async def ask_question_stream(
-    request: QuestionRequest,
-    current_user: OptionalCurrentUser
+    question_request: QuestionRequest,
+    user: UserOrGuest
 ):
     """Submit a Bible-related question and get a streamed AI-generated answer.
     
@@ -153,17 +168,17 @@ async def ask_question_stream(
     - error: Error occurred
     """
     try:
-        # Use authenticated user's ID if logged in, otherwise use default guest ID
-        if current_user:
-            request.user_id = current_user["id"]
-        else:
-            request.user_id = 1  # Guest user ID
+        # Set user ID from authenticated or guest user
+        question_request.user_id = user["id"]
+        
+        # Only record in recent questions for authenticated users (not guests)
+        is_authenticated = not user.get("is_guest", False)
         
         async def generate():
             try:
                 async for chunk in question_service.stream_question(
-                    request,
-                    record_recent=bool(current_user)
+                    question_request,
+                    record_recent=is_authenticated
                 ):
                     # Format as Server-Sent Events
                     yield f"data: {json.dumps(chunk)}\n\n"
@@ -189,20 +204,17 @@ async def ask_question_stream(
 
 @app.post("/api/ask/followup", response_model=QuestionResponse)
 async def ask_followup_question(
-    request: FollowUpQuestionRequest,
-    current_user: OptionalCurrentUser
+    followup_request: FollowUpQuestionRequest,
+    user: UserOrGuest
 ):
     """Submit a follow-up question with conversation context."""
     try:
-        # Use authenticated user's ID if logged in, otherwise use default guest ID
-        if current_user:
-            request.user_id = current_user["id"]
-        else:
-            request.user_id = 1  # Guest user ID
+        # Set user ID from authenticated or guest user
+        followup_request.user_id = user["id"]
         
         # Follow-up questions should not appear in the "recent questions" list
         result = await question_service.process_followup_question(
-            request,
+            followup_request,
             record_recent=False
         )
         return result
@@ -216,8 +228,8 @@ async def ask_followup_question(
 
 @app.post("/api/ask/followup/stream")
 async def ask_followup_question_stream(
-    request: FollowUpQuestionRequest,
-    current_user: OptionalCurrentUser
+    followup_request: FollowUpQuestionRequest,
+    user: UserOrGuest
 ):
     """Submit a follow-up question with conversation context and get a streamed answer.
     
@@ -229,16 +241,13 @@ async def ask_followup_question_stream(
     - error: Error occurred
     """
     try:
-        # Use authenticated user's ID if logged in, otherwise use default guest ID
-        if current_user:
-            request.user_id = current_user["id"]
-        else:
-            request.user_id = 1  # Guest user ID
+        # Set user ID from authenticated or guest user
+        followup_request.user_id = user["id"]
         
         async def generate():
             try:
                 async for chunk in question_service.stream_followup_question(
-                    request,
+                    followup_request,
                     record_recent=False  # Follow-ups don't go in recent questions
                 ):
                     # Format as Server-Sent Events
