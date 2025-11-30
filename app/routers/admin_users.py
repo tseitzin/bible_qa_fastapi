@@ -361,3 +361,50 @@ async def delete_user(
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete user")
+
+
+@router.post("/cleanup-guest-users")
+async def cleanup_guest_users(
+    current_admin: dict = Depends(get_current_admin_user),
+):
+    """Clean up invalid guest user accounts (all users without email except user_id=1)."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Find guest users (no email, not user_id=1)
+                cur.execute("""
+                    SELECT id, username 
+                    FROM users 
+                    WHERE (email IS NULL OR email = '') 
+                    AND id != 1
+                    ORDER BY id
+                """)
+                guest_users = cur.fetchall()
+                
+                if not guest_users:
+                    return {
+                        "status": "success",
+                        "message": "No guest users to clean up",
+                        "deleted_count": 0,
+                    }
+                
+                # Delete all guest users except user_id=1
+                cur.execute("""
+                    DELETE FROM users 
+                    WHERE (email IS NULL OR email = '') 
+                    AND id != 1
+                """)
+                deleted_count = cur.rowcount
+                conn.commit()
+                
+                logger.info(f"Admin {current_admin['id']} cleaned up {deleted_count} guest users")
+                
+                return {
+                    "status": "success",
+                    "message": f"Cleaned up {deleted_count} guest user(s)",
+                    "deleted_count": deleted_count,
+                    "deleted_users": [f"user_{u['id']} (ID: {u['id']})" for u in guest_users],
+                }
+    except Exception as e:
+        logger.error(f"Error cleaning up guest users: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cleanup guest users")
