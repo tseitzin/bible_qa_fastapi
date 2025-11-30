@@ -18,7 +18,7 @@ from openai import (
 
 from app.utils.exceptions import OpenAIError
 from app.services.mcp_integration import execute_mcp_tool, get_bible_tools_for_openai
-from app.database import ApiRequestLogRepository
+from app.database import ApiRequestLogRepository, OpenAIApiCallRepository
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class OpenAIService:
         tools = get_bible_tools_for_openai()
         
         try:
-            answer = await self._chat_with_tools(messages, tools)
+            answer = await self._chat_with_tools(messages, tools, user_id=user_id, question=question)
             # Log successful OpenAI API call
             ApiRequestLogRepository.log_request(
                 user_id=user_id,
@@ -155,9 +155,14 @@ class OpenAIService:
             logger.exception("Unexpected OpenAI failure")
             raise OpenAIError("AI service unavailable") from exc
 
-    async def _chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]]) -> str:
+    async def _chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_id: Optional[int] = None, question: Optional[str] = None) -> str:
         """Execute a chat completion with function calling support."""
         import time
+        
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        total_tokens = 0
+        call_start_time = time.time()
         
         iteration = 0
         while iteration < self.max_tool_iterations:
@@ -184,6 +189,12 @@ class OpenAIService:
             elapsed = time.time() - start_time
             logger.info(f"OpenAI API call completed in {elapsed:.2f}s (iteration {iteration})")
             
+            # Accumulate token usage
+            if hasattr(response, 'usage') and response.usage:
+                total_prompt_tokens += response.usage.prompt_tokens
+                total_completion_tokens += response.usage.completion_tokens
+                total_tokens += response.usage.total_tokens
+            
             message = response.choices[0].message
             
             # If no tool calls, return the answer
@@ -200,6 +211,20 @@ class OpenAIService:
                 if not content:
                     logger.error(f"Empty response from OpenAI. Full message: {message.model_dump()}")
                     raise OpenAIError("AI service returned an empty response")
+                
+                # Log the successful OpenAI API call
+                response_time_ms = int((time.time() - call_start_time) * 1000)
+                OpenAIApiCallRepository.log_call(
+                    user_id=user_id,
+                    question=question[:500] if question else "N/A",
+                    model=self.model,
+                    prompt_tokens=total_prompt_tokens,
+                    completion_tokens=total_completion_tokens,
+                    total_tokens=total_tokens,
+                    status="success",
+                    response_time_ms=response_time_ms
+                )
+                
                 return content.strip()
             
             # Add assistant's message with tool calls to history
