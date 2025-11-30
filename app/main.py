@@ -208,6 +208,55 @@ async def ask_followup_question(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.post("/api/ask/followup/stream")
+async def ask_followup_question_stream(
+    request: FollowUpQuestionRequest,
+    current_user: OptionalCurrentUser
+):
+    """Submit a follow-up question with conversation context and get a streamed answer.
+    
+    Returns Server-Sent Events (SSE) with the following event types:
+    - cached: Complete cached answer (instant)
+    - status: Status update during processing
+    - content: Streaming text chunks
+    - done: Processing complete with question_id
+    - error: Error occurred
+    """
+    try:
+        # Use authenticated user's ID if logged in, otherwise use default guest ID
+        if current_user:
+            request.user_id = current_user["id"]
+        else:
+            request.user_id = 1  # Guest user ID
+        
+        async def generate():
+            try:
+                async for chunk in question_service.stream_followup_question(
+                    request,
+                    record_recent=False  # Follow-ups don't go in recent questions
+                ):
+                    # Format as Server-Sent Events
+                    yield f"data: {json.dumps(chunk)}\n\n"
+            except Exception as e:
+                logger.error(f"Error in follow-up stream: {e}")
+                yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+            }
+        )
+    except (DatabaseError, OpenAIError):
+        raise
+    except Exception as e:
+        logger.error(f"Error setting up follow-up stream: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @app.get("/api/history", response_model=HistoryResponse)
 async def get_question_history(
     current_user: CurrentUser,

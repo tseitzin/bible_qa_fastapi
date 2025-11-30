@@ -206,3 +206,76 @@ class QuestionService:
             logger.error(f"Error streaming question: {e}")
             yield {"type": "error", "message": str(e)}
             raise
+    
+    async def stream_followup_question(self, request: FollowUpQuestionRequest, record_recent: bool = False):
+        """Stream a follow-up question response with conversation context, checking cache first.
+        
+        Yields:
+            dict: Status updates and content chunks
+                  {"type": "cached", "answer": str} for cached responses
+                  {"type": "status", "message": str} for status updates
+                  {"type": "content", "text": str} for streaming content
+                  {"type": "done", "question_id": int} when complete
+        """
+        try:
+            # Convert conversation history to OpenAI format
+            conversation_history = [
+                {"role": msg.role, "content": msg.content}
+                for msg in request.conversation_history
+            ]
+            
+            # Check cache first (includes conversation context)
+            cached_answer = CacheService.get_question(request.question, conversation_history)
+            if cached_answer:
+                logger.info(f"Cache hit for streamed follow-up question: {request.question[:50]}...")
+                
+                # Return cached answer immediately (no streaming needed)
+                is_biblical = self.openai_service.is_biblical_answer(cached_answer)
+                question_id = self.question_repo.create_question(
+                    user_id=request.user_id,
+                    question=request.question,
+                    parent_question_id=request.parent_question_id
+                )
+                self.question_repo.create_answer(question_id, cached_answer)
+                
+                if record_recent and is_biblical:
+                    RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+                
+                # Yield complete cached response
+                yield {"type": "cached", "answer": cached_answer, "question_id": question_id, "is_biblical": is_biblical}
+                return
+            
+            # Stream from OpenAI with conversation context
+            complete_answer = ""
+            async for chunk in self.openai_service.stream_bible_answer(
+                request.question,
+                conversation_history=conversation_history
+            ):
+                if chunk["type"] == "content":
+                    complete_answer += chunk["text"]
+                yield chunk
+            
+            # After streaming completes, save and cache
+            is_biblical = self.openai_service.is_biblical_answer(complete_answer)
+            
+            question_id = self.question_repo.create_question(
+                user_id=request.user_id,
+                question=request.question,
+                parent_question_id=request.parent_question_id
+            )
+            self.question_repo.create_answer(question_id, complete_answer)
+            
+            # Cache the complete answer with conversation context
+            if is_biblical:
+                CacheService.set_question(request.question, complete_answer, conversation_history)
+            
+            if record_recent and is_biblical:
+                RecentQuestionsRepository.add_recent_question(request.user_id, request.question)
+            
+            # Yield completion event
+            yield {"type": "done", "question_id": question_id, "is_biblical": is_biblical}
+            
+        except Exception as e:
+            logger.error(f"Error streaming follow-up question: {e}")
+            yield {"type": "error", "message": str(e)}
+            raise
