@@ -20,6 +20,8 @@ class UserListItem(BaseModel):
     username: str
     is_active: bool
     is_admin: bool
+    is_guest: bool
+    last_ip_address: Optional[str]
     created_at: str
     question_count: int
     saved_answer_count: int
@@ -33,6 +35,8 @@ class UserDetail(BaseModel):
     username: str
     is_active: bool
     is_admin: bool
+    is_guest: bool
+    last_ip_address: Optional[str]
     created_at: str
     question_count: int
     saved_answer_count: int
@@ -45,6 +49,7 @@ class UserStats(BaseModel):
     total_users: int
     active_users: int
     admin_users: int
+    guest_users: int
     users_with_questions: int
 
 
@@ -68,6 +73,8 @@ async def list_users(
                         u.username,
                         u.is_active,
                         u.is_admin,
+                        COALESCE(u.is_guest, FALSE) as is_guest,
+                        u.last_ip_address,
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
@@ -88,7 +95,7 @@ async def list_users(
                 if active_only:
                     query_parts.append("AND u.is_active = true")
                 
-                query_parts.append("GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.created_at")
+                query_parts.append("GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.created_at")
                 query_parts.append("ORDER BY u.created_at DESC")
                 query_parts.append("LIMIT %s OFFSET %s")
                 params.extend([limit, offset])
@@ -103,6 +110,8 @@ async def list_users(
                         username=user["username"] or "",
                         is_active=user["is_active"],
                         is_admin=user["is_admin"],
+                        is_guest=user.get("is_guest", False),
+                        last_ip_address=user.get("last_ip_address"),
                         created_at=user["created_at"].isoformat() if user["created_at"] else "",
                         question_count=user["question_count"] or 0,
                         saved_answer_count=user["saved_answer_count"] or 0,
@@ -125,7 +134,8 @@ async def get_user_stats(current_admin: dict = Depends(get_current_admin_user)):
                     SELECT 
                         COUNT(*) as total_users,
                         COUNT(*) FILTER (WHERE is_active = true) as active_users,
-                        COUNT(*) FILTER (WHERE is_admin = true) as admin_users
+                        COUNT(*) FILTER (WHERE is_admin = true) as admin_users,
+                        COUNT(*) FILTER (WHERE is_guest = true) as guest_users
                     FROM users
                 """)
                 stats = cur.fetchone()
@@ -141,6 +151,7 @@ async def get_user_stats(current_admin: dict = Depends(get_current_admin_user)):
                     total_users=stats["total_users"] or 0,
                     active_users=stats["active_users"] or 0,
                     admin_users=stats["admin_users"] or 0,
+                    guest_users=stats["guest_users"] or 0,
                     users_with_questions=question_stats["users_with_questions"] or 0,
                 )
     except Exception as e:
@@ -164,6 +175,8 @@ async def get_user_detail(
                         u.username,
                         u.is_active,
                         u.is_admin,
+                        COALESCE(u.is_guest, FALSE) as is_guest,
+                        u.last_ip_address,
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
@@ -174,7 +187,7 @@ async def get_user_detail(
                     LEFT JOIN saved_answers sa ON u.id = sa.user_id
                     LEFT JOIN recent_questions rq ON u.id = rq.user_id
                     WHERE u.id = %s
-                    GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.created_at
+                    GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.created_at
                 """, (user_id,))
                 
                 user = cur.fetchone()
@@ -187,6 +200,8 @@ async def get_user_detail(
                     username=user["username"] or "",
                     is_active=user["is_active"],
                     is_admin=user["is_admin"],
+                    is_guest=user.get("is_guest", False),
+                    last_ip_address=user.get("last_ip_address"),
                     created_at=user["created_at"].isoformat() if user["created_at"] else "",
                     question_count=user["question_count"] or 0,
                     saved_answer_count=user["saved_answer_count"] or 0,
