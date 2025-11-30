@@ -178,7 +178,10 @@ class QuestionService:
             
             # Stream from OpenAI
             complete_answer = ""
-            async for chunk in self.openai_service.stream_bible_answer(request.question):
+            async for chunk in self.openai_service.stream_bible_answer(
+                request.question,
+                user_id=request.user_id
+            ):
                 if chunk["type"] == "content":
                     complete_answer += chunk["text"]
                 yield chunk
@@ -249,7 +252,8 @@ class QuestionService:
             complete_answer = ""
             async for chunk in self.openai_service.stream_bible_answer(
                 request.question,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                user_id=request.user_id
             ):
                 if chunk["type"] == "content":
                     complete_answer += chunk["text"]

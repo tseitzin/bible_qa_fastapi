@@ -124,6 +124,7 @@ class OpenAIService:
         self,
         question: str,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
+        user_id: Optional[int] = None,
     ):
         """Stream an AI-generated answer to a Bible-related question.
         
@@ -144,7 +145,7 @@ class OpenAIService:
         tools = get_bible_tools_for_openai()
         
         try:
-            async for chunk in self._stream_chat_with_tools(messages, tools):
+            async for chunk in self._stream_chat_with_tools(messages, tools, user_id=user_id, question=question):
                 yield chunk
         except (BadRequestError, RateLimitError, APITimeoutError, APIConnectionError, APIError) as exc:
             logger.error("OpenAI API error: %s", exc)
@@ -258,12 +259,17 @@ class OpenAIService:
         
         raise OpenAIError("Maximum tool iterations reached")
     
-    async def _stream_chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]]):
+    async def _stream_chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_id: Optional[int] = None, question: Optional[str] = None):
         """Execute a streaming chat completion with function calling support.
         
         Yields status updates during tool execution and streams the final answer tokens.
         """
         import time
+        
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        total_tokens = 0
+        call_start_time = time.time()
         
         iteration = 0
         while iteration < self.max_tool_iterations:
@@ -289,6 +295,12 @@ class OpenAIService:
             
             elapsed = time.time() - start_time
             logger.info(f"OpenAI API call completed in {elapsed:.2f}s (iteration {iteration})")
+            
+            # Accumulate token usage
+            if hasattr(response, 'usage') and response.usage:
+                total_prompt_tokens += response.usage.prompt_tokens
+                total_completion_tokens += response.usage.completion_tokens
+                total_tokens += response.usage.total_tokens
             
             message = response.choices[0].message
             
@@ -345,6 +357,7 @@ class OpenAIService:
             
             # Stream tokens
             content_started = False
+            stream_usage = None
             for chunk in stream:
                 if chunk.choices and len(chunk.choices) > 0:
                     delta = chunk.choices[0].delta
@@ -353,15 +366,51 @@ class OpenAIService:
                             content_started = True
                         yield {"type": "content", "text": delta.content}
                     
+                    # Capture usage from final chunk
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        stream_usage = chunk.usage
+                    
                     # Check for finish
                     if chunk.choices[0].finish_reason:
                         finish_reason = chunk.choices[0].finish_reason
+                        
+                        # Add streaming tokens to total
+                        if stream_usage:
+                            total_prompt_tokens += stream_usage.prompt_tokens
+                            total_completion_tokens += stream_usage.completion_tokens
+                            total_tokens += stream_usage.total_tokens
+                        
+                        # Log the successful OpenAI API call
+                        response_time_ms = int((time.time() - call_start_time) * 1000)
+                        OpenAIApiCallRepository.log_call(
+                            user_id=user_id,
+                            question=question[:500] if question else "N/A",
+                            model=self.model,
+                            prompt_tokens=total_prompt_tokens,
+                            completion_tokens=total_completion_tokens,
+                            total_tokens=total_tokens,
+                            status="success",
+                            response_time_ms=response_time_ms
+                        )
+                        
                         if finish_reason == "length":
                             logger.warning("OpenAI hit token limit during streaming")
                             yield {"type": "error", "message": "Response truncated due to length"}
                         return
             
             # If we got here, streaming completed successfully
+            # Log even if we didn't get finish_reason
+            response_time_ms = int((time.time() - call_start_time) * 1000)
+            OpenAIApiCallRepository.log_call(
+                user_id=user_id,
+                question=question[:500] if question else "N/A",
+                model=self.model,
+                prompt_tokens=total_prompt_tokens,
+                completion_tokens=total_completion_tokens,
+                total_tokens=total_tokens,
+                status="success",
+                response_time_ms=response_time_ms
+            )
             return
         
         raise OpenAIError("Maximum tool iterations reached")
