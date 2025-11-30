@@ -196,14 +196,6 @@ def create_user(email: str, username: str, password: str) -> dict:
             user = cur.fetchone()
             conn.commit()
             return _convert_user(user)
-# Admin-only dependency for FastAPI endpoints
-from fastapi import Depends
-
-async def get_current_admin_user(current_user: dict = Depends(get_current_user_dependency)) -> dict:
-    """Require current user to be admin."""
-    if not current_user.get("is_admin", False):
-        raise HTTPException(status_code=403, detail="Admin privileges required")
-    return current_user
 
 
 async def get_current_user(
@@ -295,4 +287,11 @@ async def get_current_active_user(current_user: dict = Depends(get_current_user_
     """Get the current active user (additional check)."""
     if not current_user["is_active"]:
         raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+async def get_current_admin_user(current_user: dict = Depends(get_current_user_dependency)) -> dict:
+    """Require current user to be admin."""
+    if not current_user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Admin privileges required")
     return current_user

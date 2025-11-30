@@ -101,25 +101,26 @@ def get_db_connection():
 
 
 class QuestionRepository:
-        @staticmethod
-        def delete_question(question_id: int) -> bool:
-            """Delete a question and its answers by question ID."""
-            with get_db_connection() as conn:
-                with conn.cursor() as cur:
-                    # Delete answers first (if any)
-                    cur.execute(
-                        "DELETE FROM answers WHERE question_id = %s",
-                        (question_id,)
-                    )
-                    # Delete the question itself
-                    cur.execute(
-                        "DELETE FROM questions WHERE id = %s",
-                        (question_id,)
-                    )
-                    deleted = cur.rowcount > 0
-                    conn.commit()
-                    return deleted
     """Repository for question-related database operations."""
+    
+    @staticmethod
+    def delete_question(question_id: int) -> bool:
+        """Delete a question and its answers by question ID."""
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Delete answers first (if any)
+                cur.execute(
+                    "DELETE FROM answers WHERE question_id = %s",
+                    (question_id,)
+                )
+                # Delete the question itself
+                cur.execute(
+                    "DELETE FROM questions WHERE id = %s",
+                    (question_id,)
+                )
+                deleted = cur.rowcount > 0
+                conn.commit()
+                return deleted
     
     @staticmethod
     def create_question(user_id: int, question: str, parent_question_id: int = None) -> int:
@@ -227,19 +228,20 @@ class QuestionRepository:
 
 
 class SavedAnswersRepository:
-        @staticmethod
-        def admin_delete_saved_answer(answer_id: int) -> bool:
-            """Delete a saved answer by ID (admin, no user check)."""
-            with get_db_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "DELETE FROM saved_answers WHERE id = %s",
-                        (answer_id,)
-                    )
-                    deleted = cur.rowcount > 0
-                    conn.commit()
-                    return deleted
     """Repository for saved answers database operations."""
+    
+    @staticmethod
+    def admin_delete_saved_answer(answer_id: int) -> bool:
+        """Delete a saved answer by ID (admin, no user check)."""
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM saved_answers WHERE id = %s",
+                    (answer_id,)
+                )
+                deleted = cur.rowcount > 0
+                conn.commit()
+                return deleted
     
     @staticmethod
     def save_answer(user_id: int, question_id: int, tags: list) -> dict:
