@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import inspect
 import secrets
+import uuid
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security.utils import get_authorization_scheme_param
@@ -180,18 +181,71 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
             return _convert_user(cur.fetchone())
 
 
-def create_user(email: str, username: str, password: str) -> dict:
-    """Create a new user in the database."""
+def get_client_ip(request: Request) -> str:
+    """Extract client IP address from request, handling proxies."""
+    # Check X-Forwarded-For header (set by proxies/load balancers)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # X-Forwarded-For can contain multiple IPs; take the first (original client)
+        return forwarded_for.split(",")[0].strip()
+    
+    # Check X-Real-IP header (set by some proxies)
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+    
+    # Fall back to direct client IP
+    if request.client and request.client.host:
+        return request.client.host
+    
+    return "unknown"
+
+
+def create_guest_user(ip_address: str) -> dict:
+    """Create a unique anonymous guest user."""
+    # Generate unique username using UUID
+    guest_username = f"guest_{uuid.uuid4().hex[:12]}"
+    
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO users (username, email, is_active, is_admin, is_guest, last_ip_address)
+                VALUES (%s, NULL, TRUE, FALSE, TRUE, %s)
+                RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address, created_at
+                """,
+                (guest_username, ip_address)
+            )
+            user = cur.fetchone()
+            conn.commit()
+            
+            # Convert to dict format
+            if user:
+                return {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "username": user["username"],
+                    "is_active": user["is_active"],
+                    "is_admin": user["is_admin"],
+                    "is_guest": user.get("is_guest", True),
+                    "last_ip_address": user.get("last_ip_address"),
+                    "created_at": user["created_at"]
+                }
+            return None
+
+
+def create_user(email: str, username: str, password: str, ip_address: Optional[str] = None) -> dict:
+    """Create a new registered user in the database."""
     hashed_password = get_password_hash(password)
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO users (email, username, hashed_password, is_active, is_admin)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO users (email, username, hashed_password, is_active, is_admin, is_guest, last_ip_address)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, email, username, is_active, is_admin, created_at
                 """,
-                (email, username, hashed_password, True, False)
+                (email, username, hashed_password, True, False, False, ip_address)
             )
             user = cur.fetchone()
             conn.commit()
@@ -295,3 +349,63 @@ async def get_current_admin_user(current_user: dict = Depends(get_current_user_d
     if not current_user.get("is_admin", False):
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return current_user
+
+
+GUEST_USER_COOKIE_NAME = "guest_user_id"
+
+
+async def get_or_create_guest_user(request: Request, response: Response = None) -> dict:
+    """Get authenticated user or create a guest user if not authenticated.
+    
+    This ensures every request has a user associated with it for tracking purposes.
+    Guest users are uniquely identified and tracked.
+    """
+    # First try to get authenticated user
+    override_value = await _resolve_dependency_override(request, get_current_user_optional_dependency)
+    if override_value[1]:
+        user = override_value[0]
+        if user:
+            return user
+    
+    # Try normal auth
+    user = await get_current_user_optional(request=request)
+    if user:
+        return user
+    
+    # No authenticated user - check for existing guest user in cookie
+    guest_user_id = request.cookies.get(GUEST_USER_COOKIE_NAME)
+    if guest_user_id:
+        try:
+            guest_user = get_user_by_id(int(guest_user_id))
+            if guest_user and guest_user.get("is_guest", False):
+                return guest_user
+        except (ValueError, TypeError):
+            pass  # Invalid guest user ID, create new one
+    
+    # Create new guest user
+    ip_address = get_client_ip(request)
+    guest_user = create_guest_user(ip_address)
+    
+    # Store guest user ID in cookie if response object is available
+    # Note: Response object needs to be injected via dependency for cookie setting
+    if response and guest_user:
+        response.set_cookie(
+            key=GUEST_USER_COOKIE_NAME,
+            value=str(guest_user["id"]),
+            max_age=60 * 60 * 24 * 365,  # 1 year
+            httponly=True,
+            secure=settings.auth_cookie_secure,
+            samesite=settings.auth_cookie_samesite,
+            path="/",
+        )
+    
+    return guest_user
+
+
+async def get_or_create_guest_user_dependency(request: Request) -> dict:
+    """FastAPI dependency that ensures a user (authenticated or guest) exists."""
+    override_value = await _resolve_dependency_override(request, get_or_create_guest_user_dependency)
+    if override_value[1]:
+        return override_value[0]
+    
+    return await get_or_create_guest_user(request)

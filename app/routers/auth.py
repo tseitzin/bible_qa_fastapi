@@ -13,6 +13,7 @@ from app.auth import (
     generate_csrf_token,
     set_csrf_cookie,
     clear_csrf_cookie,
+    get_client_ip,
 )
 from app.config import get_settings
 import logging
@@ -25,7 +26,7 @@ settings = get_settings()
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, request: Request):
     """Register a new user."""
     try:
         # Check if user already exists
@@ -36,11 +37,15 @@ async def register(user_data: UserCreate):
                 detail="Email already registered"
             )
         
+        # Get client IP for tracking
+        ip_address = get_client_ip(request)
+        
         # Create new user
         user = create_user(
             email=user_data.email,
             username=user_data.username,
-            password=user_data.password
+            password=user_data.password,
+            ip_address=ip_address
         )
         
         logger.info(f"New user registered: {user['email']}")
