@@ -18,6 +18,7 @@ from openai import (
 
 from app.utils.exceptions import OpenAIError
 from app.services.mcp_integration import execute_mcp_tool, get_bible_tools_for_openai
+from app.database import ApiRequestLogRepository
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,8 @@ class OpenAIService:
         self,
         question: str,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
+        user_id: Optional[int] = None,
+        client_ip: Optional[str] = None,
     ) -> str:
         """Get an AI-generated answer to a Bible-related question using Chat Completions with function calling."""
         
@@ -80,13 +83,40 @@ class OpenAIService:
         
         try:
             answer = await self._chat_with_tools(messages, tools)
+            # Log successful OpenAI API call
+            ApiRequestLogRepository.log_request(
+                user_id=user_id,
+                endpoint="/openai/chat/completions",
+                method="POST",
+                status_code=200,
+                ip_address=client_ip,
+                payload_summary=json.dumps({"question": question[:100], "has_history": bool(conversation_history)})
+            )
             return answer
         except (BadRequestError, RateLimitError, APITimeoutError, APIConnectionError, APIError) as exc:
+            # Log failed OpenAI API call
+            ApiRequestLogRepository.log_request(
+                user_id=user_id,
+                endpoint="/openai/chat/completions",
+                method="POST",
+                status_code=500,
+                ip_address=client_ip,
+                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]})
+            )
             logger.error("OpenAI API error: %s", exc)
             raise OpenAIError("AI service unavailable") from exc
         except OpenAIError:
             raise
         except Exception as exc:  # pragma: no cover - defensive
+            # Log unexpected error
+            ApiRequestLogRepository.log_request(
+                user_id=user_id,
+                endpoint="/openai/chat/completions",
+                method="POST",
+                status_code=500,
+                ip_address=client_ip,
+                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]})
+            )
             logger.exception("Unexpected OpenAI failure")
             raise OpenAIError("AI service unavailable") from exc
     
