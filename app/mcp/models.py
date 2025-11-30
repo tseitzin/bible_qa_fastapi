@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -37,7 +37,7 @@ class MCPInvokeResponse(BaseModel):
 
     tool: str
     success: bool = True
-    result: Optional[Dict[str, Any]] = None
+    result: Optional[Union[Dict[str, Any], List[Any]]] = None
     error: Optional[str] = None
     usage: Optional[Dict[str, Any]] = None
 

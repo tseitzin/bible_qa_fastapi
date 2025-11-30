@@ -386,7 +386,7 @@ class TestBibleService:
 
         self.service.search_verses("love", limit=1000)
         params = mock_cursor.execute.call_args[0][1]
-        assert params[1] == 100  # limit clamped to 100
+        assert params[1] == 500  # limit clamped to 500
 
     @patch("app.services.bible_service.get_db_connection")
     def test_list_books_orders_results(self, mock_get_db_connection):
