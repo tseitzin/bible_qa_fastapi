@@ -181,6 +181,17 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
             return _convert_user(cur.fetchone())
 
 
+def update_user_ip_address(user_id: int, ip_address: str) -> None:
+    """Update the last IP address for a user."""
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET last_ip_address = %s WHERE id = %s",
+                (ip_address, user_id)
+            )
+            conn.commit()
+
+
 def get_client_ip(request: Request) -> str:
     """Extract client IP address from request, handling proxies."""
     # Check X-Forwarded-For header (set by proxies/load balancers)

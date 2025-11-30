@@ -14,6 +14,7 @@ from app.auth import (
     set_csrf_cookie,
     clear_csrf_cookie,
     get_client_ip,
+    update_user_ip_address,
 )
 from app.config import get_settings
 import logging
@@ -67,7 +68,7 @@ async def register(user_data: UserCreate, request: Request):
 
 
 @router.post("/login")
-async def login(credentials: UserLogin, response: Response):
+async def login(credentials: UserLogin, request: Request, response: Response):
     """Authenticate user and establish a session via secure cookie."""
     user = get_user_by_email(credentials.email)
     
@@ -83,6 +84,10 @@ async def login(credentials: UserLogin, response: Response):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user account"
         )
+    
+    # Update user's last IP address
+    ip_address = get_client_ip(request)
+    update_user_ip_address(user["id"], ip_address)
     
     # Create access token
     access_token = create_access_token(data={"sub": str(user["id"])})
