@@ -21,6 +21,7 @@ class TestQuestionService:
         """Set up test fixtures."""
         self.service = QuestionService()
     
+    @pytest.mark.asyncio
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
     async def test_process_question_success(self, mock_repo_class, mock_openai_class):
@@ -63,6 +64,7 @@ class TestQuestionService:
         mock_repo.create_question.assert_called_once_with(user_id=1, question="What is faith?")
         mock_repo.create_answer.assert_called_once_with(123, "Faith is the substance of things hoped for, the evidence of things not seen.")
     
+    @pytest.mark.asyncio
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
     async def test_process_question_openai_error(self, mock_repo_class, mock_openai_class):
@@ -96,6 +98,7 @@ class TestQuestionService:
         mock_repo.create_question.assert_not_called()
         mock_repo.create_answer.assert_not_called()
     
+    @pytest.mark.asyncio
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
     async def test_process_question_database_error(self, mock_repo_class, mock_openai_class):
@@ -124,6 +127,7 @@ class TestQuestionService:
         with pytest.raises(Exception, match="Database connection failed"):
             await service.process_question(request)
 
+    @pytest.mark.asyncio
     @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
@@ -156,6 +160,7 @@ class TestQuestionService:
         assert result.is_biblical is True
         mock_add_recent.assert_called_once_with(7, "Tracked question")
 
+    @pytest.mark.asyncio
     @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
@@ -188,6 +193,7 @@ class TestQuestionService:
         assert result.is_biblical is False
         mock_add_recent.assert_not_called()
 
+    @pytest.mark.asyncio
     @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
@@ -233,6 +239,7 @@ class TestQuestionService:
         )
         mock_add_recent.assert_called_once_with(2, "What happened after the Exodus?")
 
+    @pytest.mark.asyncio
     @patch('app.services.question_service.RecentQuestionsRepository.add_recent_question')
     @patch('app.services.question_service.OpenAIService')
     @patch('app.services.question_service.QuestionRepository')
