@@ -44,6 +44,7 @@ class TestUserRegistration:
             'email': 'test@example.com',
             'username': 'testuser',
             'is_active': True,
+            'is_admin': False,
             'created_at': datetime.utcnow()
         }
         mock_create_user.return_value = mock_user
@@ -186,6 +187,7 @@ class TestUserLogin:
             'email': 'test@example.com',
             'username': 'testuser',
             'is_active': True,
+            'is_admin': False,
             'created_at': created_at,
         }
 
@@ -387,6 +389,7 @@ class TestProtectedEndpointAccess:
             'email': 'test@example.com',
             'username': 'testuser',
             'is_active': True,
+            'is_admin': False,
             'created_at': datetime.utcnow()
         }
         mock_get_user_by_id.return_value = mock_user
@@ -417,6 +420,7 @@ class TestProtectedEndpointAccess:
             'email': 'test@example.com',
             'username': 'testuser',
             'is_active': True,
+            'is_admin': False,
             'created_at': datetime.utcnow()
         }
         mock_get_user_by_id.return_value = mock_user
@@ -451,6 +455,7 @@ class TestSavedAnswersAssociation:
             'email': 'test@example.com',
             'username': 'testuser',
             'is_active': True,
+            'is_admin': False,
             'created_at': datetime.utcnow()
         }
         mock_get_user_by_id.return_value = mock_user
@@ -507,6 +512,7 @@ class TestSavedAnswersAssociation:
             'email': 'user2@example.com',
             'username': 'user2',
             'is_active': True,
+            'is_admin': False,
             'created_at': datetime.utcnow()
         }
         mock_get_user_by_id.return_value = mock_user

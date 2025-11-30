@@ -94,6 +94,7 @@ async def login(credentials: UserLogin, response: Response):
         "email": user["email"],
         "username": user["username"],
         "is_active": user["is_active"],
+        "is_admin": user.get("is_admin", False),
         "created_at": user.get("created_at"),
     }
     return User.model_validate(sanitized_user).model_dump()
