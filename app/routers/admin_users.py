@@ -122,18 +122,23 @@ async def get_user_stats(current_admin: dict = Depends(get_current_admin_user)):
                     SELECT 
                         COUNT(*) as total_users,
                         COUNT(*) FILTER (WHERE is_active = true) as active_users,
-                        COUNT(*) FILTER (WHERE is_admin = true) as admin_users,
-                        COUNT(DISTINCT q.user_id) as users_with_questions
-                    FROM users u
-                    LEFT JOIN questions q ON u.id = q.user_id
+                        COUNT(*) FILTER (WHERE is_admin = true) as admin_users
+                    FROM users
                 """)
                 stats = cur.fetchone()
+                
+                # Get users with questions separately
+                cur.execute("""
+                    SELECT COUNT(DISTINCT user_id) as users_with_questions
+                    FROM questions
+                """)
+                question_stats = cur.fetchone()
                 
                 return UserStats(
                     total_users=stats["total_users"] or 0,
                     active_users=stats["active_users"] or 0,
                     admin_users=stats["admin_users"] or 0,
-                    users_with_questions=stats["users_with_questions"] or 0,
+                    users_with_questions=question_stats["users_with_questions"] or 0,
                 )
     except Exception as e:
         logger.error(f"Error getting user stats: {e}")
