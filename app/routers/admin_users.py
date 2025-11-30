@@ -23,6 +23,7 @@ class UserListItem(BaseModel):
     created_at: str
     question_count: int
     saved_answer_count: int
+    last_activity: Optional[str]
 
 
 class UserDetail(BaseModel):
@@ -69,7 +70,8 @@ async def list_users(
                         u.is_admin,
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
-                        COUNT(DISTINCT sa.id) as saved_answer_count
+                        COUNT(DISTINCT sa.id) as saved_answer_count,
+                        MAX(q.asked_at) as last_activity
                     FROM users u
                     LEFT JOIN questions q ON u.id = q.user_id
                     LEFT JOIN saved_answers sa ON u.id = sa.user_id
@@ -104,6 +106,7 @@ async def list_users(
                         created_at=user["created_at"].isoformat() if user["created_at"] else "",
                         question_count=user["question_count"] or 0,
                         saved_answer_count=user["saved_answer_count"] or 0,
+                        last_activity=user["last_activity"].isoformat() if user["last_activity"] else None,
                     )
                     for user in users
                 ]
