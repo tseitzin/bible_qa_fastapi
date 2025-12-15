@@ -112,7 +112,10 @@ async def get_user_or_guest(request: Request, response: Response) -> Dict[str, A
         return user
     
     # Create or retrieve guest user
-    return await get_or_create_guest_user(request, response)
+    guest_user = await get_or_create_guest_user(request, response)
+    # Store in request.state for middleware logging
+    request.state.user = guest_user
+    return guest_user
 
 
 UserOrGuest = Annotated[Dict[str, Any], Depends(get_user_or_guest)]

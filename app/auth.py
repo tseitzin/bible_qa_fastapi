@@ -326,26 +326,41 @@ async def get_current_user_dependency(request: Request) -> dict:
     """Wrapper for FastAPI dependency injection of required current user."""
     override_value = await _resolve_dependency_override(request, get_current_user_dependency)
     if override_value[1]:
-        return override_value[0]
+        user = override_value[0]
+        request.state.user = user
+        return user
 
     override_value = await _resolve_dependency_override(request, get_current_user)
     if override_value[1]:
-        return override_value[0]
+        user = override_value[0]
+        request.state.user = user
+        return user
 
-    return await get_current_user(request=request)
+    user = await get_current_user(request=request)
+    request.state.user = user
+    return user
 
 
 async def get_current_user_optional_dependency(request: Request) -> Optional[dict]:
     """Wrapper for FastAPI dependency injection of optional current user."""
     override_value = await _resolve_dependency_override(request, get_current_user_optional_dependency)
     if override_value[1]:
-        return override_value[0]
+        user = override_value[0]
+        if user:
+            request.state.user = user
+        return user
 
     override_value = await _resolve_dependency_override(request, get_current_user_optional)
     if override_value[1]:
-        return override_value[0]
+        user = override_value[0]
+        if user:
+            request.state.user = user
+        return user
 
-    return await get_current_user_optional(request=request)
+    user = await get_current_user_optional(request=request)
+    if user:
+        request.state.user = user
+    return user
 
 
 async def get_current_active_user(current_user: dict = Depends(get_current_user_dependency)) -> dict:
