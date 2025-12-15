@@ -212,8 +212,8 @@ def get_client_ip(request: Request) -> str:
     return "unknown"
 
 
-def create_guest_user(ip_address: str) -> dict:
-    """Create a unique anonymous guest user."""
+def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
+    """Create a unique anonymous guest user with optional geolocation data."""
     # Generate unique username using UUID
     guest_username = f"guest_{uuid.uuid4().hex[:12]}"
     
@@ -221,11 +221,17 @@ def create_guest_user(ip_address: str) -> dict:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO users (username, email, is_active, is_admin, is_guest, last_ip_address)
-                VALUES (%s, NULL, TRUE, FALSE, TRUE, %s)
-                RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address, created_at
+                INSERT INTO users (username, email, is_active, is_admin, is_guest, last_ip_address,
+                                   country_code, country_name, city, region)
+                VALUES (%s, NULL, TRUE, FALSE, TRUE, %s, %s, %s, %s, %s)
+                RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address, 
+                          country_code, country_name, city, region, created_at
                 """,
-                (guest_username, ip_address)
+                (guest_username, ip_address,
+                 geo_data.get('country_code') if geo_data else None,
+                 geo_data.get('country_name') if geo_data else None,
+                 geo_data.get('city') if geo_data else None,
+                 geo_data.get('region') if geo_data else None)
             )
             user = cur.fetchone()
             conn.commit()
@@ -408,9 +414,14 @@ async def get_or_create_guest_user(request: Request, response: Response = None) 
         except (ValueError, TypeError):
             pass  # Invalid guest user ID, create new one
     
-    # Create new guest user
+    # Create new guest user with geolocation
     ip_address = get_client_ip(request)
-    guest_user = create_guest_user(ip_address)
+    
+    # Try to get geolocation for the IP (sync version)
+    from app.services.geolocation_service import GeolocationService
+    geo_data = GeolocationService.lookup_ip_sync(ip_address)
+    
+    guest_user = create_guest_user(ip_address, geo_data)
     
     # Store guest user ID in cookie if response object is available
     # Note: Response object needs to be injected via dependency for cookie setting
