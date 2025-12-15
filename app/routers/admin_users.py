@@ -90,10 +90,11 @@ async def list_users(
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
-                        MAX(q.asked_at) as last_activity
+                        GREATEST(MAX(q.asked_at), MAX(l.timestamp)) as last_activity
                     FROM users u
                     LEFT JOIN questions q ON u.id = q.user_id
                     LEFT JOIN saved_answers sa ON u.id = sa.user_id
+                    LEFT JOIN api_request_logs l ON u.id = l.user_id
                     WHERE 1=1
                     """
                 ]
@@ -201,11 +202,12 @@ async def get_user_detail(
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
                         COUNT(DISTINCT rq.id) as recent_question_count,
-                        MAX(q.asked_at) as last_activity
+                        GREATEST(MAX(q.asked_at), MAX(l.timestamp)) as last_activity
                     FROM users u
                     LEFT JOIN questions q ON u.id = q.user_id
                     LEFT JOIN saved_answers sa ON u.id = sa.user_id
                     LEFT JOIN recent_questions rq ON u.id = rq.user_id
+                    LEFT JOIN api_request_logs l ON u.id = l.user_id
                     WHERE u.id = %s
                     GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at
                 """, (user_id,))
