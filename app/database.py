@@ -993,18 +993,23 @@ class ApiRequestLogRepository:
         status_code: int,
         ip_address: Optional[str] = None,
         payload_summary: Optional[str] = None,
+        country_code: Optional[str] = None,
+        country_name: Optional[str] = None,
+        city: Optional[str] = None,
     ) -> None:
-        """Log an API request."""
+        """Log an API request with optional geolocation data."""
         try:
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
                         INSERT INTO api_request_logs 
-                        (user_id, endpoint, method, status_code, ip_address, payload_summary)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        (user_id, endpoint, method, status_code, ip_address, payload_summary, 
+                         country_code, country_name, city)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        (user_id, endpoint, method, status_code, ip_address, payload_summary)
+                        (user_id, endpoint, method, status_code, ip_address, payload_summary,
+                         country_code, country_name, city)
                     )
                     conn.commit()
         except Exception as e:
