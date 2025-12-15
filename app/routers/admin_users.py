@@ -22,6 +22,10 @@ class UserListItem(BaseModel):
     is_admin: bool
     is_guest: bool
     last_ip_address: Optional[str]
+    country_code: Optional[str] = None
+    country_name: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
     created_at: str
     question_count: int
     saved_answer_count: int
@@ -37,6 +41,10 @@ class UserDetail(BaseModel):
     is_admin: bool
     is_guest: bool
     last_ip_address: Optional[str]
+    country_code: Optional[str] = None
+    country_name: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
     created_at: str
     question_count: int
     saved_answer_count: int
@@ -75,6 +83,10 @@ async def list_users(
                         u.is_admin,
                         COALESCE(u.is_guest, FALSE) as is_guest,
                         u.last_ip_address,
+                        u.country_code,
+                        u.country_name,
+                        u.city,
+                        u.region,
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
@@ -95,7 +107,7 @@ async def list_users(
                 if active_only:
                     query_parts.append("AND u.is_active = true")
                 
-                query_parts.append("GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.created_at")
+                query_parts.append("GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at")
                 query_parts.append("ORDER BY u.created_at DESC")
                 query_parts.append("LIMIT %s OFFSET %s")
                 params.extend([limit, offset])
@@ -112,6 +124,10 @@ async def list_users(
                         is_admin=user["is_admin"],
                         is_guest=user.get("is_guest", False),
                         last_ip_address=user.get("last_ip_address"),
+                        country_code=user.get("country_code"),
+                        country_name=user.get("country_name"),
+                        city=user.get("city"),
+                        region=user.get("region"),
                         created_at=user["created_at"].isoformat() if user["created_at"] else "",
                         question_count=user["question_count"] or 0,
                         saved_answer_count=user["saved_answer_count"] or 0,
@@ -177,6 +193,10 @@ async def get_user_detail(
                         u.is_admin,
                         COALESCE(u.is_guest, FALSE) as is_guest,
                         u.last_ip_address,
+                        u.country_code,
+                        u.country_name,
+                        u.city,
+                        u.region,
                         u.created_at,
                         COUNT(DISTINCT q.id) as question_count,
                         COUNT(DISTINCT sa.id) as saved_answer_count,
@@ -187,7 +207,7 @@ async def get_user_detail(
                     LEFT JOIN saved_answers sa ON u.id = sa.user_id
                     LEFT JOIN recent_questions rq ON u.id = rq.user_id
                     WHERE u.id = %s
-                    GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.created_at
+                    GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at
                 """, (user_id,))
                 
                 user = cur.fetchone()
@@ -202,6 +222,10 @@ async def get_user_detail(
                     is_admin=user["is_admin"],
                     is_guest=user.get("is_guest", False),
                     last_ip_address=user.get("last_ip_address"),
+                    country_code=user.get("country_code"),
+                    country_name=user.get("country_name"),
+                    city=user.get("city"),
+                    region=user.get("region"),
                     created_at=user["created_at"].isoformat() if user["created_at"] else "",
                     question_count=user["question_count"] or 0,
                     saved_answer_count=user["saved_answer_count"] or 0,

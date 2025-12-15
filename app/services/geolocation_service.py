@@ -1,6 +1,7 @@
 """Service for IP geolocation lookup."""
 import logging
 import httpx
+import ipaddress
 from typing import Optional, Dict
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class GeolocationService:
                 'city': 'San Francisco'
             }
         """
-        if not ip_address or ip_address.startswith('10.') or ip_address == '127.0.0.1':
+        if not ip_address or GeolocationService._is_private_ip(ip_address):
             # Skip private/local IPs
             return None
         
@@ -76,7 +77,7 @@ class GeolocationService:
         Returns:
             Dictionary with geolocation data or None if lookup fails
         """
-        if not ip_address or ip_address.startswith('10.') or ip_address == '127.0.0.1':
+        if not ip_address or GeolocationService._is_private_ip(ip_address):
             # Skip private/local IPs
             return None
         
@@ -109,3 +110,13 @@ class GeolocationService:
         except Exception as e:
             logger.error(f"Error during geolocation lookup for {ip_address}: {e}")
             return None
+    
+    @staticmethod
+    def _is_private_ip(ip_address: str) -> bool:
+        """Check if an IP address is private/local."""
+        try:
+            ip = ipaddress.ip_address(ip_address)
+            return ip.is_private or ip.is_loopback or ip.is_link_local
+        except ValueError:
+            # Invalid IP address
+            return True
