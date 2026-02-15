@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 class QuestionService:
     """Service for handling question-related business logic."""
-    
-    def __init__(self):
-        self.openai_service = OpenAIService()
-        self.question_repo = QuestionRepository()
+
+    def __init__(self, openai_service=None, question_repo=None):
+        self.openai_service = openai_service or OpenAIService()
+        self.question_repo = question_repo or QuestionRepository()
     
     async def process_question(self, request: QuestionRequest, record_recent: bool = False) -> QuestionResponse:
         """Process a question through the complete pipeline."""

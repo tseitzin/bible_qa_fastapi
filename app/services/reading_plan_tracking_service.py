@@ -1,7 +1,7 @@
 """Business logic for user reading plan tracking."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
@@ -116,7 +116,7 @@ class ReadingPlanTrackingService:
 
         plan_completed_at_str: Optional[str] = None
         if completed_days >= total_days and total_days > 0:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(timezone.utc)
             UserReadingPlanRepository.set_plan_completed_at(user_plan_id, timestamp)
             plan_completed_at_str = timestamp.isoformat()
         else:

@@ -17,6 +17,9 @@ python-multipart
 openpyxl
 redis>=5.0.0
 
+# Development tools
+ruff
+
 # Testing dependencies
 pytest
 pytest-asyncio

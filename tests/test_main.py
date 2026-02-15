@@ -10,9 +10,18 @@ from app.models.schemas import QuestionRequest, QuestionResponse, HistoryRespons
 from app.utils.exceptions import DatabaseError, OpenAIError
 from app.auth import get_current_user, get_current_user_optional
 
+# Mock guest user returned when no auth is present (prevents real DB access)
+_GUEST_USER = {"id": 1, "is_active": True, "is_guest": True, "username": "test_guest"}
 
 # Test client
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def mock_guest_user():
+    """Prevent guest user creation from hitting the real DB."""
+    with patch('app.main.get_or_create_guest_user', new_callable=AsyncMock, return_value=_GUEST_USER):
+        yield
 
 
 @pytest.fixture

@@ -2,41 +2,16 @@
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 
 from app.database import PageAnalyticsRepository
 from app.auth import get_current_user_optional_dependency, get_current_admin_user
+from app.models.schemas import PageViewRequest, PageMetricsUpdate, ClickEventRequest
 from app.services.geolocation_service import GeolocationService
+from app.utils.network import get_client_ip
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
-
-
-# Pydantic models
-class PageViewRequest(BaseModel):
-    session_id: str
-    page_path: str
-    page_title: Optional[str] = None
-    referrer: Optional[str] = None
-
-
-class PageMetricsUpdate(BaseModel):
-    page_analytics_id: int
-    visit_duration_seconds: Optional[int] = None
-    max_scroll_depth_percent: Optional[int] = None
-
-
-class ClickEventRequest(BaseModel):
-    session_id: str
-    page_path: str
-    page_analytics_id: Optional[int] = None
-    element_type: Optional[str] = None
-    element_id: Optional[str] = None
-    element_text: Optional[str] = None
-    element_class: Optional[str] = None
-    click_position_x: Optional[int] = None
-    click_position_y: Optional[int] = None
 
 
 @router.post("/page-view")
@@ -51,14 +26,7 @@ async def log_page_view(
         user_id = current_user.get("id") if current_user else None
         
         # Get client IP
-        ip_address = None
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            ip_address = forwarded_for.split(",")[0].strip()
-        elif request.headers.get("X-Real-IP"):
-            ip_address = request.headers.get("X-Real-IP").strip()
-        elif request.client:
-            ip_address = request.client.host
+        ip_address = get_client_ip(request)
         
         # Get user agent
         user_agent = request.headers.get("user-agent")

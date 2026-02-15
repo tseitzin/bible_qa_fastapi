@@ -1,5 +1,6 @@
 """Bible Q&A FastAPI Application."""
-from datetime import datetime
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Annotated, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,7 @@ from app.auth import (
     get_or_create_guest_user,
 )
 from app.routers import auth, saved_answers, bible, recent_questions, study_resources, user_reading_plans, admin_api_logs, admin_users, page_analytics
+from app.routers.admin_content import router as admin_content_router
 from app.middleware.csrf import CSRFMiddleware
 from app.middleware.api_request_logging import ApiRequestLoggingMiddleware
 from app.mcp.router import router as mcp_router
@@ -35,11 +37,37 @@ settings = get_settings()
 
 # Log CORS configuration for debugging
 logger.info(f"CORS allowed origins: {settings.allowed_origins}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup and shutdown resources."""
+    # Startup
+    logger.info("Initializing application resources...")
+    try:
+        initialize_connection_pool(minconn=2, maxconn=20)
+        initialize_redis()
+        logger.info("Application startup complete")
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
+    yield
+    # Shutdown
+    logger.info("Shutting down application...")
+    try:
+        close_connection_pool()
+        close_redis()
+        logger.info("Application shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.app_name,
     description="AI-powered Bible Q&A API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(CSRFMiddleware, settings=settings)
@@ -57,34 +85,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize resources on application startup."""
-    logger.info("Initializing application resources...")
-    try:
-        # Initialize database connection pool
-        initialize_connection_pool(minconn=2, maxconn=20)
-        
-        # Initialize Redis cache
-        initialize_redis()
-        
-        logger.info("Application startup complete")
-    except Exception as e:
-        logger.error(f"Failed to initialize application: {e}")
-        raise
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on application shutdown."""
-    logger.info("Shutting down application...")
-    try:
-        close_connection_pool()
-        close_redis()
-        logger.info("Application shutdown complete")
-    except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
-
 
 # Initialize services
 question_service = QuestionService()
@@ -99,6 +99,7 @@ app.include_router(user_reading_plans.router)
 app.include_router(mcp_router)
 app.include_router(admin_api_logs.router)
 app.include_router(admin_users.router)
+app.include_router(admin_content_router)
 app.include_router(page_analytics.router)
 
 CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user_dependency)]
@@ -111,7 +112,7 @@ async def get_user_or_guest(request: Request, response: Response) -> Dict[str, A
     user = await get_current_user_optional_dependency(request)
     if user:
         return user
-    
+
     # Create or retrieve guest user
     guest_user = await get_or_create_guest_user(request, response)
     # Store in request.state for middleware logging
@@ -127,7 +128,7 @@ async def health_check():
     """Health check endpoint."""
     return HealthCheck(
         status="healthy",
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -140,10 +141,10 @@ async def ask_question(
     try:
         # Set user ID from authenticated or guest user
         question_request.user_id = user["id"]
-        
+
         # Only record in recent questions for authenticated users (not guests)
         is_authenticated = not user.get("is_guest", False)
-        
+
         result = await question_service.process_question(
             question_request,
             record_recent=is_authenticated
@@ -163,7 +164,7 @@ async def ask_question_stream(
     user: UserOrGuest
 ):
     """Submit a Bible-related question and get a streamed AI-generated answer.
-    
+
     Returns Server-Sent Events (SSE) with the following event types:
     - cached: Complete cached answer (instant)
     - status: Status update during processing
@@ -174,10 +175,10 @@ async def ask_question_stream(
     try:
         # Set user ID from authenticated or guest user
         question_request.user_id = user["id"]
-        
+
         # Only record in recent questions for authenticated users (not guests)
         is_authenticated = not user.get("is_guest", False)
-        
+
         async def generate():
             try:
                 async for chunk in question_service.stream_question(
@@ -189,7 +190,7 @@ async def ask_question_stream(
             except Exception as e:
                 logger.error(f"Error in stream: {e}")
                 yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
-        
+
         return StreamingResponse(
             generate(),
             media_type="text/event-stream",
@@ -215,7 +216,7 @@ async def ask_followup_question(
     try:
         # Set user ID from authenticated or guest user
         followup_request.user_id = user["id"]
-        
+
         # Follow-up questions should not appear in the "recent questions" list
         result = await question_service.process_followup_question(
             followup_request,
@@ -236,7 +237,7 @@ async def ask_followup_question_stream(
     user: UserOrGuest
 ):
     """Submit a follow-up question with conversation context and get a streamed answer.
-    
+
     Returns Server-Sent Events (SSE) with the following event types:
     - cached: Complete cached answer (instant)
     - status: Status update during processing
@@ -247,7 +248,7 @@ async def ask_followup_question_stream(
     try:
         # Set user ID from authenticated or guest user
         followup_request.user_id = user["id"]
-        
+
         async def generate():
             try:
                 async for chunk in question_service.stream_followup_question(
@@ -259,7 +260,7 @@ async def ask_followup_question_stream(
             except Exception as e:
                 logger.error(f"Error in follow-up stream: {e}")
                 yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
-        
+
         return StreamingResponse(
             generate(),
             media_type="text/event-stream",
@@ -285,7 +286,7 @@ async def get_question_history(
     try:
         if limit > 100:
             limit = 100  # Reasonable limit
-        
+
         history = question_service.get_user_history(current_user["id"], limit)
         return history
     except (DatabaseError, OpenAIError):
@@ -313,34 +314,3 @@ async def openai_error_handler(request, exc):
         status_code=exc.status_code,
         content={"detail": exc.detail}
     )
-
-
-# Admin endpoints
-from app.auth import get_current_admin_user
-from app.database import QuestionRepository, SavedAnswersRepository
-
-
-@app.delete("/api/admin/questions/{question_id}")
-async def admin_delete_question(question_id: int, current_admin: dict = Depends(get_current_admin_user)):
-    """Delete a question by ID (admin only)."""
-    try:
-        deleted = QuestionRepository.delete_question(question_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Question not found")
-        return {"status": "deleted", "question_id": question_id}
-    except Exception as e:
-        logger.error(f"Admin delete question error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.delete("/api/admin/saved_answers/{answer_id}")
-async def admin_delete_saved_answer(answer_id: int, current_admin: dict = Depends(get_current_admin_user)):
-    """Delete a saved answer by ID (admin only)."""
-    try:
-        deleted = SavedAnswersRepository.admin_delete_saved_answer(answer_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Saved answer not found")
-        return {"status": "deleted", "answer_id": answer_id}
-    except Exception as e:
-        logger.error(f"Admin delete saved answer error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")

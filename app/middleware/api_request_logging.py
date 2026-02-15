@@ -8,6 +8,7 @@ from starlette.responses import Response
 
 from app.database import ApiRequestLogRepository
 from app.services.geolocation_service import GeolocationService
+from app.utils.network import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -28,18 +29,7 @@ class ApiRequestLoggingMiddleware(BaseHTTPMiddleware):
                 user_id = request.state.user.get("id")
             
             # Get client IP (handle proxy/load balancer)
-            ip_address = None
-            # Check X-Forwarded-For header (set by proxies/load balancers)
-            forwarded_for = request.headers.get("X-Forwarded-For")
-            if forwarded_for:
-                # X-Forwarded-For can contain multiple IPs; take the first (original client)
-                ip_address = forwarded_for.split(",")[0].strip()
-            elif request.headers.get("X-Real-IP"):
-                # Check X-Real-IP header (set by some proxies)
-                ip_address = request.headers.get("X-Real-IP").strip()
-            elif request.client:
-                # Fall back to direct client IP
-                ip_address = request.client.host
+            ip_address = get_client_ip(request)
             
             # Lookup geolocation for the IP (async, don't block)
             geolocation = None

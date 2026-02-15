@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 class QuestionRequest(BaseModel):
     """Request model for asking questions."""
     question: str = Field(..., min_length=1, max_length=1000, description="The question to ask")
-    user_id: int = Field(default=1, description="User ID (placeholder for future auth)")
+    user_id: int = Field(default=1, description="User ID (set by the server from auth context)")
 
 
 class ConversationMessage(BaseModel):
@@ -287,4 +287,33 @@ class GeneratedDevotionalResponse(BaseModel):
     summary: str
     reflection_questions: List[str]
     supporting_reading: Optional[ReadingPlanScheduleItem] = None
+
+
+# Page Analytics Schemas
+class PageViewRequest(BaseModel):
+    """Request model for logging a page view."""
+    session_id: str
+    page_path: str
+    page_title: Optional[str] = None
+    referrer: Optional[str] = None
+
+
+class PageMetricsUpdate(BaseModel):
+    """Request model for updating page metrics."""
+    page_analytics_id: int
+    visit_duration_seconds: Optional[int] = None
+    max_scroll_depth_percent: Optional[int] = None
+
+
+class ClickEventRequest(BaseModel):
+    """Request model for logging a click event."""
+    session_id: str
+    page_path: str
+    page_analytics_id: Optional[int] = None
+    element_type: Optional[str] = None
+    element_id: Optional[str] = None
+    element_text: Optional[str] = None
+    element_class: Optional[str] = None
+    click_position_x: Optional[int] = None
+    click_position_y: Optional[int] = None
 

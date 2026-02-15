@@ -1,5 +1,5 @@
 """Authentication utilities for JWT tokens and password hashing."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import inspect
 import secrets
@@ -43,9 +43,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """Create a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -194,22 +194,8 @@ def update_user_ip_address(user_id: int, ip_address: str) -> None:
 
 def get_client_ip(request: Request) -> str:
     """Extract client IP address from request, handling proxies."""
-    # Check X-Forwarded-For header (set by proxies/load balancers)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # X-Forwarded-For can contain multiple IPs; take the first (original client)
-        return forwarded_for.split(",")[0].strip()
-    
-    # Check X-Real-IP header (set by some proxies)
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip.strip()
-    
-    # Fall back to direct client IP
-    if request.client and request.client.host:
-        return request.client.host
-    
-    return "unknown"
+    from app.utils.network import get_client_ip as _get_client_ip
+    return _get_client_ip(request)
 
 
 def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
