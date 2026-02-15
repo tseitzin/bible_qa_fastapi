@@ -1,7 +1,8 @@
 """Pydantic models for request/response schemas."""
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class QuestionRequest(BaseModel):
@@ -141,7 +142,7 @@ class SavedAnswerResponse(BaseModel):
     saved_at: datetime
     parent_question_id: Optional[int] = None
     conversation_thread: List[ThreadItem] = Field(default_factory=list)
-    
+
     class Config:
         from_attributes = True
 

@@ -1,3 +1,3 @@
 """Model Context Protocol (MCP) integration package."""
 
-from .router import router, list_registered_tools  # noqa: F401
+from .router import list_registered_tools, router  # noqa: F401

@@ -1,11 +1,11 @@
 """Admin API endpoints for viewing API request logs."""
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.auth import get_current_admin_user
 from app.database import ApiRequestLogRepository, OpenAIApiCallRepository
-
 
 router = APIRouter(prefix="/api/admin/logs", tags=["admin"])
 

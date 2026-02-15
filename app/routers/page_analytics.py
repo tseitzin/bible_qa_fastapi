@@ -1,11 +1,12 @@
 """Page analytics router for tracking user behavior."""
 import logging
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.auth import get_current_admin_user, get_current_user_optional_dependency
 from app.database import PageAnalyticsRepository
-from app.auth import get_current_user_optional_dependency, get_current_admin_user
-from app.models.schemas import PageViewRequest, PageMetricsUpdate, ClickEventRequest
+from app.models.schemas import ClickEventRequest, PageMetricsUpdate, PageViewRequest
 from app.services.geolocation_service import GeolocationService
 from app.utils.network import get_client_ip
 
@@ -24,13 +25,13 @@ async def log_page_view(
     try:
         # Get user ID if authenticated
         user_id = current_user.get("id") if current_user else None
-        
+
         # Get client IP
         ip_address = get_client_ip(request)
-        
+
         # Get user agent
         user_agent = request.headers.get("user-agent")
-        
+
         # Lookup geolocation
         geolocation = None
         if ip_address and not ip_address.startswith('10.'):
@@ -38,7 +39,7 @@ async def log_page_view(
                 geolocation = await GeolocationService.lookup_ip(ip_address)
             except Exception as geo_error:
                 logger.debug(f"Geolocation lookup failed: {geo_error}")
-        
+
         # Log to database
         page_analytics_id = PageAnalyticsRepository.log_page_view(
             user_id=user_id,
@@ -52,7 +53,7 @@ async def log_page_view(
             country_name=geolocation.get('country_name') if geolocation else None,
             city=geolocation.get('city') if geolocation else None,
         )
-        
+
         return {"success": True, "page_analytics_id": page_analytics_id}
     except Exception as e:
         logger.error(f"Failed to log page view: {e}")
@@ -83,7 +84,7 @@ async def log_click_event(
     try:
         # Get user ID if authenticated
         user_id = current_user.get("id") if current_user else None
-        
+
         # Log to database
         click_event_id = PageAnalyticsRepository.log_click_event(
             page_analytics_id=click_event.page_analytics_id,
@@ -97,7 +98,7 @@ async def log_click_event(
             click_position_x=click_event.click_position_x,
             click_position_y=click_event.click_position_y,
         )
-        
+
         return {"success": True, "click_event_id": click_event_id}
     except Exception as e:
         logger.error(f"Failed to log click event: {e}")

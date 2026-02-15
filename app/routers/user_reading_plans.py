@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, Path, Response
 
 from app.auth import get_current_user_dependency
 from app.models.schemas import (
-    UserReadingPlanCreate,
-    UserReadingPlanSummary,
-    UserReadingPlanDetailResponse,
-    ReadingPlanDayCompletionUpdate,
     ReadingPlanDayCompletionStatus,
+    ReadingPlanDayCompletionUpdate,
+    UserReadingPlanCreate,
+    UserReadingPlanDetailResponse,
+    UserReadingPlanSummary,
 )
 from app.services.reading_plan_tracking_service import (
     ReadingPlanTrackingService,

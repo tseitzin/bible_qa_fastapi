@@ -1,32 +1,40 @@
 """Bible Q&A FastAPI Application."""
-from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Annotated, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Depends, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
 import json
 import logging
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Annotated, Any, Dict, Optional
 
-from app.config import get_settings
-from app.database import initialize_connection_pool, close_connection_pool
-from app.services.cache_service import initialize_redis, close_redis
-from app.models.schemas import (
-    QuestionRequest, QuestionResponse, FollowUpQuestionRequest,
-    HistoryResponse, HealthCheck
-)
-from app.services.question_service import QuestionService
-from app.utils.exceptions import DatabaseError, OpenAIError
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
+
 from app.auth import (
     get_current_user_dependency,
     get_current_user_optional_dependency,
     get_or_create_guest_user,
 )
-from app.routers import auth, saved_answers, bible, recent_questions, study_resources, user_reading_plans, admin_api_logs, admin_users, page_analytics
-from app.routers.admin_content import router as admin_content_router
-from app.middleware.csrf import CSRFMiddleware
-from app.middleware.api_request_logging import ApiRequestLoggingMiddleware
+from app.config import get_settings
+from app.database import close_connection_pool, initialize_connection_pool
 from app.mcp.router import router as mcp_router
+from app.middleware.api_request_logging import ApiRequestLoggingMiddleware
+from app.middleware.csrf import CSRFMiddleware
+from app.models.schemas import FollowUpQuestionRequest, HealthCheck, HistoryResponse, QuestionRequest, QuestionResponse
+from app.routers import (
+    admin_api_logs,
+    admin_users,
+    auth,
+    bible,
+    page_analytics,
+    recent_questions,
+    saved_answers,
+    study_resources,
+    user_reading_plans,
+)
+from app.routers.admin_content import router as admin_content_router
+from app.services.cache_service import close_redis, initialize_redis
+from app.services.question_service import QuestionService
+from app.utils.exceptions import DatabaseError, OpenAIError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

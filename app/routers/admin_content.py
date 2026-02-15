@@ -1,5 +1,6 @@
 """Admin endpoints for managing questions and saved answers."""
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth import get_current_admin_user

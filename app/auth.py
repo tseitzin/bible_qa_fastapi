@@ -1,9 +1,10 @@
 """Authentication utilities for JWT tokens and password hashing."""
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 import inspect
+import logging
 import secrets
 import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security.utils import get_authorization_scheme_param
@@ -12,9 +13,6 @@ from passlib.context import CryptContext
 
 from app.config import get_settings
 from app.database import get_db_connection
-from app.models.schemas import User
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +200,7 @@ def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
     """Create a unique anonymous guest user with optional geolocation data."""
     # Generate unique username using UUID
     guest_username = f"guest_{uuid.uuid4().hex[:12]}"
-    
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -210,7 +208,7 @@ def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
                 INSERT INTO users (username, email, is_active, is_admin, is_guest, last_ip_address,
                                    country_code, country_name, city, region)
                 VALUES (%s, NULL, TRUE, FALSE, TRUE, %s, %s, %s, %s, %s)
-                RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address, 
+                RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address,
                           country_code, country_name, city, region, created_at
                 """,
                 (guest_username, ip_address,
@@ -221,7 +219,7 @@ def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
             )
             user = cur.fetchone()
             conn.commit()
-            
+
             # Convert to dict format
             if user:
                 return {
@@ -374,7 +372,7 @@ GUEST_USER_COOKIE_NAME = "guest_user_id"
 
 async def get_or_create_guest_user(request: Request, response: Response = None) -> dict:
     """Get authenticated user or create a guest user if not authenticated.
-    
+
     This ensures every request has a user associated with it for tracking purposes.
     Guest users are uniquely identified and tracked.
     """
@@ -384,12 +382,12 @@ async def get_or_create_guest_user(request: Request, response: Response = None) 
         user = override_value[0]
         if user:
             return user
-    
+
     # Try normal auth
     user = await get_current_user_optional(request=request)
     if user:
         return user
-    
+
     # No authenticated user - check for existing guest user in cookie
     guest_user_id = request.cookies.get(GUEST_USER_COOKIE_NAME)
     if guest_user_id:
@@ -399,16 +397,16 @@ async def get_or_create_guest_user(request: Request, response: Response = None) 
                 return guest_user
         except (ValueError, TypeError):
             pass  # Invalid guest user ID, create new one
-    
+
     # Create new guest user with geolocation
     ip_address = get_client_ip(request)
-    
+
     # Try to get geolocation for the IP (sync version)
     from app.services.geolocation_service import GeolocationService
     geo_data = GeolocationService.lookup_ip_sync(ip_address)
-    
+
     guest_user = create_guest_user(ip_address, geo_data)
-    
+
     # Store guest user ID in cookie if response object is available
     # Note: Response object needs to be injected via dependency for cookie setting
     if response and guest_user:
@@ -421,7 +419,7 @@ async def get_or_create_guest_user(request: Request, response: Response = None) 
             samesite=settings.auth_cookie_samesite,
             path="/",
         )
-    
+
     return guest_user
 
 
@@ -430,5 +428,5 @@ async def get_or_create_guest_user_dependency(request: Request) -> dict:
     override_value = await _resolve_dependency_override(request, get_or_create_guest_user_dependency)
     if override_value[1]:
         return override_value[0]
-    
+
     return await get_or_create_guest_user(request)

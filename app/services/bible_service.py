@@ -307,7 +307,7 @@ class BibleService:
         if cached is not None:
             LOGGER.debug(f"Cache hit for verse: {reference}")
             return cached
-        
+
         book, chapter, verse = self._parse_reference(reference)
 
         try:
@@ -340,10 +340,10 @@ class BibleService:
             "verse": result["verse"],
             "text": result["text"],
         }
-        
+
         # Cache the result
         CacheService.set_verse(reference, verse_data)
-        
+
         return verse_data
 
     def get_passage(self, book: str, chapter: int, start_verse: int, end_verse: int) -> list[dict]:
@@ -353,7 +353,7 @@ class BibleService:
         if cached is not None:
             LOGGER.debug(f"Cache hit for passage: {book} {chapter}:{start_verse}-{end_verse}")
             return cached
-        
+
         canonical_book = self._normalize_book_name(book)
         chapter_num = self._validate_positive_int(chapter, "chapter")
         start = self._validate_positive_int(start_verse, "start_verse")
@@ -398,10 +398,10 @@ class BibleService:
             }
             for row in rows
         ]
-        
+
         # Cache the result
         CacheService.set_passage(book, chapter, start_verse, end_verse, passage_data)
-        
+
         return passage_data
 
     def get_passage_by_reference(self, reference: str) -> Optional[dict]:
@@ -479,7 +479,7 @@ class BibleService:
         if cached is not None:
             LOGGER.debug(f"Cache hit for chapter: {book} {chapter}")
             return cached
-        
+
         canonical_book = self._normalize_book_name(book)
         chapter_num = self._validate_positive_int(chapter, "chapter")
 
@@ -512,10 +512,10 @@ class BibleService:
                 for row in verses
             ],
         }
-        
+
         # Cache the result
         CacheService.set_chapter(book, chapter, chapter_data)
-        
+
         return chapter_data
 
     def search_verses(self, keyword: str, limit: int = 20) -> list[dict]:
@@ -528,7 +528,7 @@ class BibleService:
         if cached is not None:
             LOGGER.debug(f"Cache hit for search: {keyword} (limit={limit})")
             return cached
-        
+
         limit_value = self._validate_positive_int(limit, "limit")
         limit_value = min(limit_value, 500)
         term = f"%{keyword.strip()}%"
@@ -561,10 +561,10 @@ class BibleService:
             }
             for row in matches
         ]
-        
+
         # Cache the results
         CacheService.set_search(keyword, limit, results)
-        
+
         return results
 
     def list_books(self) -> list[dict]:

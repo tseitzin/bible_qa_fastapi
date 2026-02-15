@@ -1,7 +1,7 @@
 """API routes for Bible verse retrieval."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.schemas import BibleVerseResponse, BiblePassageResponse
+from app.models.schemas import BiblePassageResponse, BibleVerseResponse
 from app.services.bible_service import BibleService, get_bible_service
 from app.utils.exceptions import ValidationError
 

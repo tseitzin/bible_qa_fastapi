@@ -1,18 +1,19 @@
 """Configuration management for the Bible Q&A API."""
 import os
-from urllib.parse import urlparse
 from functools import lru_cache
+from urllib.parse import urlparse
+
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
-    
+
     # API Configuration
     app_name: str = Field(default="Bible Q&A API", env="APP_NAME")
     debug: bool = Field(default=False, env="DEBUG")
-    
+
     # Database Configuration (Heroku compatible)
     database_url: str = Field(default="", env="DATABASE_URL")
     db_name: str = Field(default="", env="DB_NAME")
@@ -20,14 +21,14 @@ class Settings(BaseSettings):
     db_password: str = Field(default="", env="DB_PASSWORD")
     db_host: str = Field(default="localhost", env="DB_HOST")
     db_port: int = Field(default=5432, env="DB_PORT")
-    
+
     # Redis Configuration
     redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     cache_enabled: bool = Field(default=True, env="CACHE_ENABLED")
     cache_ttl_verses: int = Field(default=0, env="CACHE_TTL_VERSES")  # 0 = no expiry
     cache_ttl_questions: int = Field(default=86400, env="CACHE_TTL_QUESTIONS")  # 24 hours
     cache_ttl_searches: int = Field(default=3600, env="CACHE_TTL_SEARCHES")  # 1 hour
-    
+
     # OpenAI Configuration
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", env="OPENAI_MODEL")
@@ -37,7 +38,7 @@ class Settings(BaseSettings):
     openai_reasoning_effort: str = Field(default="low", env="OPENAI_REASONING_EFFORT")
     openai_request_timeout: int = Field(default=45, env="OPENAI_REQUEST_TIMEOUT")  # Reduced from 60
     openai_max_history_messages: int = Field(default=10, env="OPENAI_MAX_HISTORY_MESSAGES")  # Reduced from 12
-    
+
     # MCP Configuration
     mcp_api_key: str = Field(default="", env="MCP_API_KEY")
 
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
     csrf_cookie_max_age: int = Field(default=60 * 60 * 6, env="CSRF_COOKIE_MAX_AGE")  # 6 hours
     csrf_header_name: str = Field(default="X-CSRF-Token", env="CSRF_HEADER_NAME")
     csrf_protection_enabled: bool = Field(default=True, env="CSRF_PROTECTION_ENABLED")
-    
+
     # CORS Configuration
     @computed_field
     @property
@@ -88,7 +89,7 @@ class Settings(BaseSettings):
         """List of path prefixes that are exempt from CSRF validation."""
         raw_paths = os.getenv("CSRF_EXEMPT_PATHS", "/api/auth/login,/api/auth/register,/api/auth/logout,/api/ask,/api/ask/followup,/api/users/me/recent-questions")
         return [path.strip() for path in raw_paths.split(",") if path.strip()]
-    
+
     @property
     def db_config(self) -> dict:
         """Get database configuration, preferring DATABASE_URL for Heroku."""
@@ -120,7 +121,7 @@ class Settings(BaseSettings):
                 'host': 'localhost',
                 'port': 5432
             }
-    
+
     model_config = SettingsConfigDict(
         env_file=None,  # Don't load from .env file
         case_sensitive=False,

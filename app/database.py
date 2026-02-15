@@ -104,16 +104,16 @@ def get_db_connection():
 
 
 # Backward-compatible re-exports from app.repositories
-from app.repositories.question import QuestionRepository  # noqa: E402, F401
-from app.repositories.saved_answers import SavedAnswersRepository  # noqa: E402, F401
-from app.repositories.recent_questions import RecentQuestionsRepository  # noqa: E402, F401
-from app.repositories.user_notes import UserNotesRepository  # noqa: E402, F401
-from app.repositories.cross_reference import CrossReferenceRepository  # noqa: E402, F401
-from app.repositories.lexicon import LexiconRepository  # noqa: E402, F401
-from app.repositories.topic_index import TopicIndexRepository  # noqa: E402, F401
-from app.repositories.reading_plan import ReadingPlanRepository  # noqa: E402, F401
-from app.repositories.devotional_template import DevotionalTemplateRepository  # noqa: E402, F401
-from app.repositories.user_reading_plan import UserReadingPlanRepository  # noqa: E402, F401
 from app.repositories.api_request_log import ApiRequestLogRepository  # noqa: E402, F401
+from app.repositories.cross_reference import CrossReferenceRepository  # noqa: E402, F401
+from app.repositories.devotional_template import DevotionalTemplateRepository  # noqa: E402, F401
+from app.repositories.lexicon import LexiconRepository  # noqa: E402, F401
 from app.repositories.openai_api_call import OpenAIApiCallRepository  # noqa: E402, F401
 from app.repositories.page_analytics import PageAnalyticsRepository  # noqa: E402, F401
+from app.repositories.question import QuestionRepository  # noqa: E402, F401
+from app.repositories.reading_plan import ReadingPlanRepository  # noqa: E402, F401
+from app.repositories.recent_questions import RecentQuestionsRepository  # noqa: E402, F401
+from app.repositories.saved_answers import SavedAnswersRepository  # noqa: E402, F401
+from app.repositories.topic_index import TopicIndexRepository  # noqa: E402, F401
+from app.repositories.user_notes import UserNotesRepository  # noqa: E402, F401
+from app.repositories.user_reading_plan import UserReadingPlanRepository  # noqa: E402, F401

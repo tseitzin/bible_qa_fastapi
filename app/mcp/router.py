@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.auth import get_current_user_optional_dependency
 from app.config import Settings, get_settings
 from app.mcp.models import (
     MCPContext,
@@ -14,7 +15,6 @@ from app.mcp.models import (
     MCPListToolsResponse,
 )
 from app.mcp.tool_registry import get_tool_definition, list_tools
-from app.auth import get_current_user_optional_dependency
 from app.utils.exceptions import ValidationError
 
 # Ensure all tools register themselves with the global registry.

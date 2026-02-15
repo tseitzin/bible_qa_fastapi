@@ -1,6 +1,7 @@
 """Service for admin operations on saved answers."""
-from app.database import SavedAnswersRepository
 import logging
+
+from app.database import SavedAnswersRepository
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 """Repository backing curated reading plans."""
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from app.database import get_db_connection
 

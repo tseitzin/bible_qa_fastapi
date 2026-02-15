@@ -1,6 +1,7 @@
 """Endpoints for managing a user's recent questions list."""
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import get_current_user_dependency
 from app.database import RecentQuestionsRepository
@@ -9,7 +10,6 @@ from app.models.schemas import (
     RecentQuestionItem,
     RecentQuestionsResponse,
 )
-
 
 router = APIRouter(
     prefix="/api/users/me/recent-questions",

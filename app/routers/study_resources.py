@@ -1,15 +1,16 @@
 """API routes for study resource utilities (cross references, topics, plans, devotionals)."""
-from fastapi import APIRouter, Depends, Query
 from typing import List
+
+from fastapi import APIRouter, Depends, Query
 
 from app.models.schemas import (
     CrossReferenceResponse,
-    TopicSearchResponse,
-    ReadingPlanMeta,
-    ReadingPlanDetailResponse,
-    DevotionalTemplate,
     DevotionalRequest,
+    DevotionalTemplate,
     GeneratedDevotionalResponse,
+    ReadingPlanDetailResponse,
+    ReadingPlanMeta,
+    TopicSearchResponse,
 )
 from app.services.study_resource_service import StudyResourceService, get_study_resource_service
 
