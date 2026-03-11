@@ -1,4 +1,5 @@
 """Phase 3 MCP tools for advanced study utilities."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta

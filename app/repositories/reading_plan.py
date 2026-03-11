@@ -1,4 +1,5 @@
 """Repository backing curated reading plans."""
+
 import json
 from typing import Any, List, Optional
 

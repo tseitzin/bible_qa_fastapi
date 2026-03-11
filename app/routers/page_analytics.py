@@ -1,4 +1,5 @@
 """Page analytics router for tracking user behavior."""
+
 import logging
 from typing import Optional
 
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 async def log_page_view(
     page_view: PageViewRequest,
     request: Request,
-    current_user: Optional[dict] = Depends(get_current_user_optional_dependency)
+    current_user: Optional[dict] = Depends(get_current_user_optional_dependency),
 ):
     """Log a page view event."""
     try:
@@ -34,7 +35,7 @@ async def log_page_view(
 
         # Lookup geolocation
         geolocation = None
-        if ip_address and not ip_address.startswith('10.'):
+        if ip_address and not ip_address.startswith("10."):
             try:
                 geolocation = await GeolocationService.lookup_ip(ip_address)
             except Exception as geo_error:
@@ -49,9 +50,9 @@ async def log_page_view(
             referrer=page_view.referrer,
             user_agent=user_agent,
             ip_address=ip_address,
-            country_code=geolocation.get('country_code') if geolocation else None,
-            country_name=geolocation.get('country_name') if geolocation else None,
-            city=geolocation.get('city') if geolocation else None,
+            country_code=geolocation.get("country_code") if geolocation else None,
+            country_name=geolocation.get("country_name") if geolocation else None,
+            city=geolocation.get("city") if geolocation else None,
         )
 
         return {"success": True, "page_analytics_id": page_analytics_id}
@@ -77,8 +78,7 @@ async def update_page_metrics(metrics: PageMetricsUpdate):
 
 @router.post("/click-event")
 async def log_click_event(
-    click_event: ClickEventRequest,
-    current_user: Optional[dict] = Depends(get_current_user_optional_dependency)
+    click_event: ClickEventRequest, current_user: Optional[dict] = Depends(get_current_user_optional_dependency)
 ):
     """Log a click event."""
     try:

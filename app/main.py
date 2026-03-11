@@ -1,4 +1,5 @@
 """Bible Q&A FastAPI Application."""
+
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -31,6 +32,7 @@ from app.routers import (
     study_resources,
     user_reading_plans,
 )
+from app.routers import trivia as trivia_router
 from app.routers.admin_content import router as admin_content_router
 from app.services.cache_service import close_redis, initialize_redis
 from app.services.question_service import QuestionService
@@ -109,6 +111,7 @@ app.include_router(admin_api_logs.router)
 app.include_router(admin_users.router)
 app.include_router(admin_content_router)
 app.include_router(page_analytics.router)
+app.include_router(trivia_router.router)
 
 CurrentUser = Annotated[Dict[str, Any], Depends(get_current_user_dependency)]
 OptionalCurrentUser = Annotated[Optional[Dict[str, Any]], Depends(get_current_user_optional_dependency)]
@@ -134,17 +137,11 @@ UserOrGuest = Annotated[Dict[str, Any], Depends(get_user_or_guest)]
 @app.get("/", response_model=HealthCheck)
 async def health_check():
     """Health check endpoint."""
-    return HealthCheck(
-        status="healthy",
-        timestamp=datetime.now(timezone.utc)
-    )
+    return HealthCheck(status="healthy", timestamp=datetime.now(timezone.utc))
 
 
 @app.post("/api/ask", response_model=QuestionResponse)
-async def ask_question(
-    question_request: QuestionRequest,
-    user: UserOrGuest
-):
+async def ask_question(question_request: QuestionRequest, user: UserOrGuest):
     """Submit a Bible-related question and get an AI-generated answer (guest or authenticated)."""
     try:
         # Set user ID from authenticated or guest user
@@ -153,10 +150,7 @@ async def ask_question(
         # Only record in recent questions for authenticated users (not guests)
         is_authenticated = not user.get("is_guest", False)
 
-        result = await question_service.process_question(
-            question_request,
-            record_recent=is_authenticated
-        )
+        result = await question_service.process_question(question_request, record_recent=is_authenticated)
         return result
     except (DatabaseError, OpenAIError):
         # Let custom error handlers handle these
@@ -167,10 +161,7 @@ async def ask_question(
 
 
 @app.post("/api/ask/stream")
-async def ask_question_stream(
-    question_request: QuestionRequest,
-    user: UserOrGuest
-):
+async def ask_question_stream(question_request: QuestionRequest, user: UserOrGuest):
     """Submit a Bible-related question and get a streamed AI-generated answer.
 
     Returns Server-Sent Events (SSE) with the following event types:
@@ -189,15 +180,12 @@ async def ask_question_stream(
 
         async def generate():
             try:
-                async for chunk in question_service.stream_question(
-                    question_request,
-                    record_recent=is_authenticated
-                ):
+                async for chunk in question_service.stream_question(question_request, record_recent=is_authenticated):
                     # Format as Server-Sent Events
                     yield f"data: {json.dumps(chunk)}\n\n"
             except Exception as e:
                 logger.error(f"Error in stream: {e}")
-                yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
+                yield f'data: {{"type": "error", "message": "{str(e)}"}}\n\n'
 
         return StreamingResponse(
             generate(),
@@ -206,7 +194,7 @@ async def ask_question_stream(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",  # Disable nginx buffering
-            }
+            },
         )
     except (DatabaseError, OpenAIError):
         raise
@@ -216,20 +204,14 @@ async def ask_question_stream(
 
 
 @app.post("/api/ask/followup", response_model=QuestionResponse)
-async def ask_followup_question(
-    followup_request: FollowUpQuestionRequest,
-    user: UserOrGuest
-):
+async def ask_followup_question(followup_request: FollowUpQuestionRequest, user: UserOrGuest):
     """Submit a follow-up question with conversation context."""
     try:
         # Set user ID from authenticated or guest user
         followup_request.user_id = user["id"]
 
         # Follow-up questions should not appear in the "recent questions" list
-        result = await question_service.process_followup_question(
-            followup_request,
-            record_recent=False
-        )
+        result = await question_service.process_followup_question(followup_request, record_recent=False)
         return result
     except (DatabaseError, OpenAIError):
         # Let custom error handlers handle these
@@ -240,10 +222,7 @@ async def ask_followup_question(
 
 
 @app.post("/api/ask/followup/stream")
-async def ask_followup_question_stream(
-    followup_request: FollowUpQuestionRequest,
-    user: UserOrGuest
-):
+async def ask_followup_question_stream(followup_request: FollowUpQuestionRequest, user: UserOrGuest):
     """Submit a follow-up question with conversation context and get a streamed answer.
 
     Returns Server-Sent Events (SSE) with the following event types:
@@ -261,13 +240,13 @@ async def ask_followup_question_stream(
             try:
                 async for chunk in question_service.stream_followup_question(
                     followup_request,
-                    record_recent=False  # Follow-ups don't go in recent questions
+                    record_recent=False,  # Follow-ups don't go in recent questions
                 ):
                     # Format as Server-Sent Events
                     yield f"data: {json.dumps(chunk)}\n\n"
             except Exception as e:
                 logger.error(f"Error in follow-up stream: {e}")
-                yield f"data: {{\"type\": \"error\", \"message\": \"{str(e)}\"}}\n\n"
+                yield f'data: {{"type": "error", "message": "{str(e)}"}}\n\n'
 
         return StreamingResponse(
             generate(),
@@ -276,7 +255,7 @@ async def ask_followup_question_stream(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",  # Disable nginx buffering
-            }
+            },
         )
     except (DatabaseError, OpenAIError):
         raise
@@ -309,16 +288,10 @@ async def get_question_history(
 @app.exception_handler(DatabaseError)
 async def database_error_handler(request, exc):
     logger.error(f"Database error: {exc.detail}")
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.exception_handler(OpenAIError)
 async def openai_error_handler(request, exc):
     logger.error(f"OpenAI error: {exc.detail}")
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

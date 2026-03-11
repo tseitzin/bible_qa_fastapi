@@ -1,4 +1,5 @@
 """Redis caching service for Bible Q&A application."""
+
 import hashlib
 import json
 import logging
@@ -33,9 +34,9 @@ def initialize_redis() -> None:
     try:
         # Configure SSL for Heroku Redis (uses self-signed certs)
         ssl_params = {}
-        if settings.redis_url.startswith('rediss://'):
-            ssl_params['ssl_cert_reqs'] = ssl.CERT_NONE
-            ssl_params['ssl_check_hostname'] = False
+        if settings.redis_url.startswith("rediss://"):
+            ssl_params["ssl_cert_reqs"] = ssl.CERT_NONE
+            ssl_params["ssl_check_hostname"] = False
 
         _redis_client = redis.from_url(
             settings.redis_url,
@@ -44,7 +45,7 @@ def initialize_redis() -> None:
             socket_timeout=5,
             retry_on_timeout=True,
             health_check_interval=30,
-            **ssl_params
+            **ssl_params,
         )
         # Test connection
         _redis_client.ping()

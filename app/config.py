@@ -1,4 +1,5 @@
 """Configuration management for the Bible Q&A API."""
+
 import os
 from functools import lru_cache
 from urllib.parse import urlparse
@@ -44,8 +45,7 @@ class Settings(BaseSettings):
 
     # Authentication Configuration
     secret_key: str = Field(
-        default="your-secret-key-change-this-in-production-use-openssl-rand-hex-32",
-        env="SECRET_KEY"
+        default="your-secret-key-change-this-in-production-use-openssl-rand-hex-32", env="SECRET_KEY"
     )
     auth_cookie_name: str = Field(default="bible_qa_auth", env="AUTH_COOKIE_NAME")
     auth_cookie_domain: str = Field(default="", env="AUTH_COOKIE_DOMAIN")
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         """Parse allowed origins from environment variable or use defaults."""
         allowed_origins_str = os.getenv(
             "ALLOWED_ORIGINS",
-            "https://www.wordoflifeanswers.com,https://wordoflifeanswers.com,http://localhost:5173,http://localhost:3000"
+            "https://www.wordoflifeanswers.com,https://wordoflifeanswers.com,http://localhost:5173,http://localhost:3000",
         )
         origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
@@ -87,7 +87,10 @@ class Settings(BaseSettings):
     @property
     def csrf_exempt_paths(self) -> list[str]:
         """List of path prefixes that are exempt from CSRF validation."""
-        raw_paths = os.getenv("CSRF_EXEMPT_PATHS", "/api/auth/login,/api/auth/register,/api/auth/logout,/api/ask,/api/ask/followup,/api/users/me/recent-questions")
+        raw_paths = os.getenv(
+            "CSRF_EXEMPT_PATHS",
+            "/api/auth/login,/api/auth/register,/api/auth/logout,/api/ask,/api/ask/followup,/api/users/me/recent-questions",
+        )
         return [path.strip() for path in raw_paths.split(",") if path.strip()]
 
     @property
@@ -97,36 +100,31 @@ class Settings(BaseSettings):
             # Parse Heroku DATABASE_URL
             parsed = urlparse(self.database_url)
             return {
-                'dbname': parsed.path[1:],  # Remove leading slash
-                'user': parsed.username,
-                'password': parsed.password,
-                'host': parsed.hostname,
-                'port': parsed.port or 5432
+                "dbname": parsed.path[1:],  # Remove leading slash
+                "user": parsed.username,
+                "password": parsed.password,
+                "host": parsed.hostname,
+                "port": parsed.port or 5432,
             }
         elif self.db_name.strip() and self.db_user.strip():
             # Use individual environment variables
             return {
-                'dbname': self.db_name,
-                'user': self.db_user,
-                'password': self.db_password,
-                'host': self.db_host,
-                'port': self.db_port
+                "dbname": self.db_name,
+                "user": self.db_user,
+                "password": self.db_password,
+                "host": self.db_host,
+                "port": self.db_port,
             }
         else:
             # Fallback configuration for development
-            return {
-                'dbname': 'bible_qa',
-                'user': 'postgres',
-                'password': 'postgres',
-                'host': 'localhost',
-                'port': 5432
-            }
+            return {"dbname": "bible_qa", "user": "postgres", "password": "postgres", "host": "localhost", "port": 5432}
 
     model_config = SettingsConfigDict(
         env_file=None,  # Don't load from .env file
         case_sensitive=False,
-        extra="ignore"
+        extra="ignore",
     )
+
 
 @lru_cache
 def get_settings() -> Settings:

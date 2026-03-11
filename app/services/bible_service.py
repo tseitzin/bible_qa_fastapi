@@ -1,4 +1,5 @@
 """Service for retrieving Bible verses from the database."""
+
 from __future__ import annotations
 
 import logging
@@ -211,13 +212,20 @@ class BibleService:
         if end_chapter is not None and end_chapter < start_chapter:
             raise ValidationError("end_chapter must be greater than or equal to start_chapter.")
 
-        if end_chapter == start_chapter and start_verse is not None and end_verse is not None and end_verse < start_verse:
+        if (
+            end_chapter == start_chapter
+            and start_verse is not None
+            and end_verse is not None
+            and end_verse < start_verse
+        ):
             raise ValidationError("end_verse must be greater than or equal to start_verse.")
 
         return book, start_chapter, start_verse, end_chapter, end_verse
 
     @staticmethod
-    def _format_reference(book: str, start_chapter: int, start_verse: Optional[int], end_chapter: Optional[int], end_verse: Optional[int]) -> str:
+    def _format_reference(
+        book: str, start_chapter: int, start_verse: Optional[int], end_chapter: Optional[int], end_verse: Optional[int]
+    ) -> str:
         start_part = f"{start_chapter}:{start_verse}" if start_verse is not None else f"{start_chapter}"
 
         if not end_chapter or end_chapter == start_chapter:
@@ -507,10 +515,7 @@ class BibleService:
         chapter_data = {
             "book": canonical_book,
             "chapter": chapter_num,
-            "verses": [
-                {"verse": row["verse"], "text": row["text"]}
-                for row in verses
-            ],
+            "verses": [{"verse": row["verse"], "text": row["text"]} for row in verses],
         }
 
         # Cache the result

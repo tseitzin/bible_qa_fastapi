@@ -1,4 +1,5 @@
 """Repository for lexical lookup data (Strong's style)."""
+
 import json
 from typing import Any, List, Optional
 

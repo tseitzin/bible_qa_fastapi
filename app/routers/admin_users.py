@@ -1,4 +1,5 @@
 """Admin endpoints for user management."""
+
 import logging
 from typing import List, Optional
 
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/admin/users", tags=["admin-users"])
 
 class UserListItem(BaseModel):
     """User list item for admin view."""
+
     id: int
     email: str
     username: str
@@ -34,6 +36,7 @@ class UserListItem(BaseModel):
 
 class UserDetail(BaseModel):
     """Detailed user information for admin."""
+
     id: int
     email: str
     username: str
@@ -54,6 +57,7 @@ class UserDetail(BaseModel):
 
 class UserStats(BaseModel):
     """User statistics."""
+
     total_users: int
     active_users: int
     admin_users: int
@@ -108,7 +112,9 @@ async def list_users(
                 if active_only:
                     query_parts.append("AND u.is_active = true")
 
-                query_parts.append("GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at")
+                query_parts.append(
+                    "GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at"
+                )
                 query_parts.append("ORDER BY u.created_at DESC")
                 query_parts.append("LIMIT %s OFFSET %s")
                 params.extend([limit, offset])
@@ -185,7 +191,8 @@ async def get_user_detail(
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT
                         u.id,
                         u.email,
@@ -210,7 +217,9 @@ async def get_user_detail(
                     LEFT JOIN api_request_logs l ON u.id = l.user_id
                     WHERE u.id = %s
                     GROUP BY u.id, u.email, u.username, u.is_active, u.is_admin, u.is_guest, u.last_ip_address, u.country_code, u.country_name, u.city, u.region, u.created_at
-                """, (user_id,))
+                """,
+                    (user_id,),
+                )
 
                 user = cur.fetchone()
                 if not user:
@@ -273,7 +282,10 @@ async def reset_user_account(
                 deleted_notes = cur.rowcount
 
                 # Delete user reading plan progress
-                cur.execute("DELETE FROM user_reading_plan_days WHERE user_id IN (SELECT id FROM user_reading_plans WHERE user_id = %s)", (user_id,))
+                cur.execute(
+                    "DELETE FROM user_reading_plan_days WHERE user_id IN (SELECT id FROM user_reading_plans WHERE user_id = %s)",
+                    (user_id,),
+                )
                 cur.execute("DELETE FROM user_reading_plans WHERE user_id = %s", (user_id,))
                 deleted_plans = cur.rowcount
 
@@ -290,7 +302,7 @@ async def reset_user_account(
                         "recent_questions": deleted_recent,
                         "notes": deleted_notes,
                         "reading_plans": deleted_plans,
-                    }
+                    },
                 }
     except HTTPException:
         raise

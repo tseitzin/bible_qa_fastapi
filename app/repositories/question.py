@@ -1,4 +1,5 @@
 """Repository for question-related database operations."""
+
 from app.database import get_db_connection
 
 
@@ -11,15 +12,9 @@ class QuestionRepository:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Delete answers first (if any)
-                cur.execute(
-                    "DELETE FROM answers WHERE question_id = %s",
-                    (question_id,)
-                )
+                cur.execute("DELETE FROM answers WHERE question_id = %s", (question_id,))
                 # Delete the question itself
-                cur.execute(
-                    "DELETE FROM questions WHERE id = %s",
-                    (question_id,)
-                )
+                cur.execute("DELETE FROM questions WHERE id = %s", (question_id,))
                 deleted = cur.rowcount > 0
                 conn.commit()
                 return deleted
@@ -31,7 +26,7 @@ class QuestionRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO questions (user_id, question, parent_question_id) VALUES (%s, %s, %s) RETURNING id;",
-                    (user_id, question, parent_question_id)
+                    (user_id, question, parent_question_id),
                 )
                 question_id = cur.fetchone()["id"]
                 conn.commit()
@@ -42,10 +37,7 @@ class QuestionRepository:
         """Create an answer for a question."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO answers (question_id, answer) VALUES (%s, %s);",
-                    (question_id, answer)
-                )
+                cur.execute("INSERT INTO answers (question_id, answer) VALUES (%s, %s);", (question_id, answer))
                 conn.commit()
 
     @staticmethod
@@ -63,7 +55,7 @@ class QuestionRepository:
                     ORDER BY q.asked_at DESC
                     LIMIT %s
                     """,
-                    (user_id, limit)
+                    (user_id, limit),
                 )
                 return cur.fetchall()
 
@@ -89,10 +81,10 @@ class QuestionRepository:
                     )
                     SELECT id FROM root_finder WHERE parent_question_id IS NULL
                     """,
-                    (question_id,)
+                    (question_id,),
                 )
                 result = cur.fetchone()
-                return result['id'] if result else question_id
+                return result["id"] if result else question_id
 
     @staticmethod
     def get_conversation_thread(question_id: int) -> list:
@@ -120,7 +112,7 @@ class QuestionRepository:
                     FROM thread
                     ORDER BY depth, asked_at
                     """,
-                    (question_id,)
+                    (question_id,),
                 )
                 result = cur.fetchall()
                 return result

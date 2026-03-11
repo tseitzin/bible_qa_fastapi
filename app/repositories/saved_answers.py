@@ -1,4 +1,5 @@
 """Repository for saved answers database operations."""
+
 from app.database import get_db_connection
 from app.repositories.question import QuestionRepository
 
@@ -11,10 +12,7 @@ class SavedAnswersRepository:
         """Delete a saved answer by ID (admin, no user check)."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM saved_answers WHERE id = %s",
-                    (answer_id,)
-                )
+                cur.execute("DELETE FROM saved_answers WHERE id = %s", (answer_id,))
                 deleted = cur.rowcount > 0
                 conn.commit()
                 return deleted
@@ -36,7 +34,7 @@ class SavedAnswersRepository:
                     SET tags = EXCLUDED.tags, saved_at = CURRENT_TIMESTAMP
                     RETURNING id, user_id, question_id, tags, saved_at
                     """,
-                    (user_id, root_question_id, tags)
+                    (user_id, root_question_id, tags),
                 )
                 result = cur.fetchone()
                 conn.commit()
@@ -64,24 +62,26 @@ class SavedAnswersRepository:
                     ORDER BY sa.saved_at DESC
                     LIMIT %s
                     """,
-                    (user_id, limit)
+                    (user_id, limit),
                 )
                 saved_answers = cur.fetchall()
 
                 # For each saved answer, get the full conversation thread
                 result = []
                 for saved_answer in saved_answers:
-                    thread = QuestionRepository.get_conversation_thread(saved_answer['question_id'])
-                    result.append({
-                        'id': saved_answer['id'],
-                        'question_id': saved_answer['question_id'],
-                        'question': saved_answer['question'],
-                        'answer': saved_answer['answer'],
-                        'tags': saved_answer['tags'],
-                        'saved_at': saved_answer['saved_at'],
-                        'parent_question_id': saved_answer['parent_question_id'],
-                        'conversation_thread': thread
-                    })
+                    thread = QuestionRepository.get_conversation_thread(saved_answer["question_id"])
+                    result.append(
+                        {
+                            "id": saved_answer["id"],
+                            "question_id": saved_answer["question_id"],
+                            "question": saved_answer["question"],
+                            "answer": saved_answer["answer"],
+                            "tags": saved_answer["tags"],
+                            "saved_at": saved_answer["saved_at"],
+                            "parent_question_id": saved_answer["parent_question_id"],
+                            "conversation_thread": thread,
+                        }
+                    )
 
                 return result
 
@@ -90,10 +90,7 @@ class SavedAnswersRepository:
         """Delete a saved answer for a user."""
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM saved_answers WHERE id = %s AND user_id = %s",
-                    (saved_answer_id, user_id)
-                )
+                cur.execute("DELETE FROM saved_answers WHERE id = %s AND user_id = %s", (saved_answer_id, user_id))
                 deleted = cur.rowcount > 0
                 conn.commit()
                 return deleted
@@ -110,7 +107,7 @@ class SavedAnswersRepository:
                     WHERE user_id = %s
                     ORDER BY tag
                     """,
-                    (user_id,)
+                    (user_id,),
                 )
                 return [row["tag"] for row in cur.fetchall()]
 
@@ -136,7 +133,7 @@ class SavedAnswersRepository:
                         WHERE sa.user_id = %s AND %s = ANY(sa.tags)
                         ORDER BY sa.saved_at DESC
                         """,
-                        (user_id, tag)
+                        (user_id, tag),
                     )
                 elif query:
                     search_pattern = f"%{query}%"
@@ -157,7 +154,7 @@ class SavedAnswersRepository:
                         AND (q.question ILIKE %s OR a.answer ILIKE %s)
                         ORDER BY sa.saved_at DESC
                         """,
-                        (user_id, search_pattern, search_pattern)
+                        (user_id, search_pattern, search_pattern),
                     )
                 else:
                     return SavedAnswersRepository.get_user_saved_answers(user_id)
@@ -167,16 +164,18 @@ class SavedAnswersRepository:
                 # For each saved answer, get the full conversation thread
                 result = []
                 for saved_answer in saved_answers:
-                    thread = QuestionRepository.get_conversation_thread(saved_answer['question_id'])
-                    result.append({
-                        'id': saved_answer['id'],
-                        'question_id': saved_answer['question_id'],
-                        'question': saved_answer['question'],
-                        'answer': saved_answer['answer'],
-                        'tags': saved_answer['tags'],
-                        'saved_at': saved_answer['saved_at'],
-                        'parent_question_id': saved_answer['parent_question_id'],
-                        'conversation_thread': thread
-                    })
+                    thread = QuestionRepository.get_conversation_thread(saved_answer["question_id"])
+                    result.append(
+                        {
+                            "id": saved_answer["id"],
+                            "question_id": saved_answer["question_id"],
+                            "question": saved_answer["question"],
+                            "answer": saved_answer["answer"],
+                            "tags": saved_answer["tags"],
+                            "saved_at": saved_answer["saved_at"],
+                            "parent_question_id": saved_answer["parent_question_id"],
+                            "conversation_thread": thread,
+                        }
+                    )
 
                 return result

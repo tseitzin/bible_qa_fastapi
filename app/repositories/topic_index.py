@@ -1,4 +1,5 @@
 """Repository for topical Bible study entries."""
+
 import json
 from typing import Any, List, Optional
 

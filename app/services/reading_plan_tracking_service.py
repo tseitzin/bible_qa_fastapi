@@ -1,4 +1,5 @@
 """Business logic for user reading plan tracking."""
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -82,7 +83,9 @@ class ReadingPlanTrackingService:
         summary = self._serialize_summary(plan_row)
         summary.update(
             {
-                "start_date": start_date_value.isoformat() if isinstance(start_date_value, date) else summary.get("start_date"),
+                "start_date": start_date_value.isoformat()
+                if isinstance(start_date_value, date)
+                else summary.get("start_date"),
                 "schedule": detailed_schedule,
             }
         )

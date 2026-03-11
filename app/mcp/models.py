@@ -1,4 +1,5 @@
 """Pydantic models and helpers for MCP tooling."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -3,6 +3,7 @@
 Repository classes have been extracted to app/repositories/.
 They are re-exported here for backward compatibility.
 """
+
 import logging
 from contextlib import contextmanager
 from typing import Optional
@@ -36,12 +37,7 @@ def initialize_connection_pool(minconn: int = 2, maxconn: int = 20) -> None:
     db_config = settings.db_config
 
     try:
-        _connection_pool = pool.ThreadedConnectionPool(
-            minconn,
-            maxconn,
-            cursor_factory=RealDictCursor,
-            **db_config
-        )
+        _connection_pool = pool.ThreadedConnectionPool(minconn, maxconn, cursor_factory=RealDictCursor, **db_config)
         logger.info(f"Database connection pool initialized (min={minconn}, max={maxconn})")
     except psycopg2.Error as e:
         logger.error(f"Failed to initialize connection pool: {e}")
@@ -73,10 +69,7 @@ def get_db_connection():
         conn = None
         try:
             db_config = settings.db_config
-            conn = psycopg2.connect(
-                cursor_factory=RealDictCursor,
-                **db_config
-            )
+            conn = psycopg2.connect(cursor_factory=RealDictCursor, **db_config)
             yield conn
         except psycopg2.Error as e:
             logger.error(f"Database error: {e}")
@@ -115,5 +108,6 @@ from app.repositories.reading_plan import ReadingPlanRepository  # noqa: E402, F
 from app.repositories.recent_questions import RecentQuestionsRepository  # noqa: E402, F401
 from app.repositories.saved_answers import SavedAnswersRepository  # noqa: E402, F401
 from app.repositories.topic_index import TopicIndexRepository  # noqa: E402, F401
+from app.repositories.trivia import TriviaRepository  # noqa: E402, F401
 from app.repositories.user_notes import UserNotesRepository  # noqa: E402, F401
 from app.repositories.user_reading_plan import UserReadingPlanRepository  # noqa: E402, F401

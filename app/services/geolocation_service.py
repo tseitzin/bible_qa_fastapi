@@ -1,4 +1,5 @@
 """Service for IP geolocation lookup."""
+
 import ipaddress
 import logging
 from typing import Dict, Optional
@@ -46,12 +47,12 @@ class GeolocationService:
                 if response.status_code == 200:
                     data = response.json()
 
-                    if data.get('status') == 'success':
+                    if data.get("status") == "success":
                         return {
-                            'country_code': data.get('countryCode'),
-                            'country_name': data.get('country'),
-                            'region': data.get('region'),
-                            'city': data.get('city'),
+                            "country_code": data.get("countryCode"),
+                            "country_name": data.get("country"),
+                            "region": data.get("region"),
+                            "city": data.get("city"),
                         }
                     else:
                         logger.warning(f"Geolocation lookup failed for {ip_address}: {data.get('message')}")
@@ -91,12 +92,12 @@ class GeolocationService:
                 if response.status_code == 200:
                     data = response.json()
 
-                    if data.get('status') == 'success':
+                    if data.get("status") == "success":
                         return {
-                            'country_code': data.get('countryCode'),
-                            'country_name': data.get('country'),
-                            'region': data.get('region'),
-                            'city': data.get('city'),
+                            "country_code": data.get("countryCode"),
+                            "country_name": data.get("country"),
+                            "region": data.get("region"),
+                            "city": data.get("city"),
                         }
                     else:
                         logger.warning(f"Geolocation lookup failed for {ip_address}: {data.get('message')}")

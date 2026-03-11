@@ -1,4 +1,5 @@
 """Authentication routes for user registration and login."""
+
 import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
@@ -35,20 +36,14 @@ async def register(user_data: UserCreate, request: Request):
         # Check if user already exists
         existing_user = get_user_by_email(user_data.email)
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
         # Get client IP for tracking
         ip_address = get_client_ip(request)
 
         # Create new user
         user = create_user(
-            email=user_data.email,
-            username=user_data.username,
-            password=user_data.password,
-            ip_address=ip_address
+            email=user_data.email, username=user_data.username, password=user_data.password, ip_address=ip_address
         )
 
         logger.info(f"New user registered: {user['email']}")
@@ -57,16 +52,10 @@ async def register(user_data: UserCreate, request: Request):
     except HTTPException:
         raise
     except IntegrityError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     except Exception as e:
         logger.error(f"Registration error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed")
 
 
 @router.post("/login")
@@ -82,10 +71,7 @@ async def login(credentials: UserLogin, request: Request, response: Response):
         )
 
     if not user["is_active"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user account"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user account")
 
     # Update user's last IP address
     ip_address = get_client_ip(request)

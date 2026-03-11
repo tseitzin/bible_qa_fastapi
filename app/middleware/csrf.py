@@ -1,4 +1,5 @@
 """CSRF protection middleware using the double-submit cookie pattern."""
+
 from __future__ import annotations
 
 from typing import Iterable

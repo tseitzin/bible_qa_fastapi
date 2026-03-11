@@ -1,4 +1,5 @@
 """Read-only access to Treasury of Scripture Knowledge cross references."""
+
 import json
 from typing import Any, List
 

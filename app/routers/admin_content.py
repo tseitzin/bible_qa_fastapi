@@ -1,4 +1,5 @@
 """Admin endpoints for managing questions and saved answers."""
+
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException

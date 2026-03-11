@@ -1,4 +1,5 @@
 """Service layer for study resource utilities exposed via the public API."""
+
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -57,7 +58,9 @@ class StudyResourceService:
             )
         return formatted
 
-    def get_reading_plan(self, slug: str, days: Optional[int] = None, start_date: Optional[str] = None) -> Dict[str, object]:
+    def get_reading_plan(
+        self, slug: str, days: Optional[int] = None, start_date: Optional[str] = None
+    ) -> Dict[str, object]:
         if not slug:
             raise ValidationError("plan slug is required")
 

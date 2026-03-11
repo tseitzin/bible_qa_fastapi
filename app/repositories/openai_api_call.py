@@ -1,4 +1,5 @@
 """Repository for OpenAI API call tracking and analytics."""
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -33,8 +34,17 @@ class OpenAIApiCallRepository:
                          total_tokens, status, error_message, response_time_ms)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        (user_id, question, model, prompt_tokens, completion_tokens,
-                         total_tokens, status, error_message, response_time_ms)
+                        (
+                            user_id,
+                            question,
+                            model,
+                            prompt_tokens,
+                            completion_tokens,
+                            total_tokens,
+                            status,
+                            error_message,
+                            response_time_ms,
+                        ),
                     )
                     conn.commit()
         except Exception as e:
@@ -56,7 +66,7 @@ class OpenAIApiCallRepository:
                     "SELECT id, timestamp, user_id, question, model, prompt_tokens,",
                     "completion_tokens, total_tokens, status, error_message, response_time_ms",
                     "FROM openai_api_calls",
-                    "WHERE 1=1"
+                    "WHERE 1=1",
                 ]
                 params: List[Any] = []
 

@@ -1,4 +1,5 @@
 """Authentication utilities for JWT tokens and password hashing."""
+
 import inspect
 import logging
 import secrets
@@ -153,7 +154,7 @@ def _convert_user(row: Optional[dict]) -> Optional[dict]:
         "is_active": row["is_active"],
         "is_admin": row.get("is_admin", False),
         "created_at": row["created_at"],
-        **({"hashed_password": row["hashed_password"]} if "hashed_password" in row else {})
+        **({"hashed_password": row["hashed_password"]} if "hashed_password" in row else {}),
     }
 
 
@@ -163,7 +164,7 @@ def get_user_by_email(email: str) -> Optional[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id, email, username, hashed_password, is_active, is_admin, created_at FROM users WHERE email = %s",
-                (email,)
+                (email,),
             )
             return _convert_user(cur.fetchone())
 
@@ -173,8 +174,7 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, email, username, is_active, is_admin, created_at FROM users WHERE id = %s",
-                (user_id,)
+                "SELECT id, email, username, is_active, is_admin, created_at FROM users WHERE id = %s", (user_id,)
             )
             return _convert_user(cur.fetchone())
 
@@ -183,16 +183,14 @@ def update_user_ip_address(user_id: int, ip_address: str) -> None:
     """Update the last IP address for a user."""
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE users SET last_ip_address = %s WHERE id = %s",
-                (ip_address, user_id)
-            )
+            cur.execute("UPDATE users SET last_ip_address = %s WHERE id = %s", (ip_address, user_id))
             conn.commit()
 
 
 def get_client_ip(request: Request) -> str:
     """Extract client IP address from request, handling proxies."""
     from app.utils.network import get_client_ip as _get_client_ip
+
     return _get_client_ip(request)
 
 
@@ -211,11 +209,14 @@ def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
                 RETURNING id, email, username, is_active, is_admin, is_guest, last_ip_address,
                           country_code, country_name, city, region, created_at
                 """,
-                (guest_username, ip_address,
-                 geo_data.get('country_code') if geo_data else None,
-                 geo_data.get('country_name') if geo_data else None,
-                 geo_data.get('city') if geo_data else None,
-                 geo_data.get('region') if geo_data else None)
+                (
+                    guest_username,
+                    ip_address,
+                    geo_data.get("country_code") if geo_data else None,
+                    geo_data.get("country_name") if geo_data else None,
+                    geo_data.get("city") if geo_data else None,
+                    geo_data.get("region") if geo_data else None,
+                ),
             )
             user = cur.fetchone()
             conn.commit()
@@ -230,7 +231,7 @@ def create_guest_user(ip_address: str, geo_data: dict = None) -> dict:
                     "is_admin": user["is_admin"],
                     "is_guest": user.get("is_guest", True),
                     "last_ip_address": user.get("last_ip_address"),
-                    "created_at": user["created_at"]
+                    "created_at": user["created_at"],
                 }
             return None
 
@@ -246,7 +247,7 @@ def create_user(email: str, username: str, password: str, ip_address: Optional[s
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, email, username, is_active, is_admin, created_at
                 """,
-                (email, username, hashed_password, True, False, False, ip_address)
+                (email, username, hashed_password, True, False, False, ip_address),
             )
             user = cur.fetchone()
             conn.commit()
@@ -403,6 +404,7 @@ async def get_or_create_guest_user(request: Request, response: Response = None) 
 
     # Try to get geolocation for the IP (sync version)
     from app.services.geolocation_service import GeolocationService
+
     geo_data = GeolocationService.lookup_ip_sync(ip_address)
 
     guest_user = create_guest_user(ip_address, geo_data)

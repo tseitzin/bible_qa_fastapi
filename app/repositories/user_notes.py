@@ -1,4 +1,5 @@
 """Repository for storing and retrieving user-authored study notes."""
+
 import json
 from typing import Any
 

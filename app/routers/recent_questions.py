@@ -1,4 +1,5 @@
 """Endpoints for managing a user's recent questions list."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -24,8 +25,7 @@ async def list_recent_questions(current_user: CurrentUser):
     """Return the most recent questions asked by the authenticated user."""
     records = RecentQuestionsRepository.get_recent_questions(current_user["id"])
     recent_questions = [
-        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"])
-        for item in records
+        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"]) for item in records
     ]
     return RecentQuestionsResponse(recent_questions=recent_questions)
 
@@ -43,8 +43,7 @@ async def add_recent_question(
     RecentQuestionsRepository.add_recent_question(current_user["id"], question_text)
     records = RecentQuestionsRepository.get_recent_questions(current_user["id"])
     recent_questions = [
-        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"])
-        for item in records
+        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"]) for item in records
     ]
     return RecentQuestionsResponse(recent_questions=recent_questions)
 
@@ -61,7 +60,6 @@ async def delete_recent_question(
 
     records = RecentQuestionsRepository.get_recent_questions(current_user["id"])
     recent_questions = [
-        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"])
-        for item in records
+        RecentQuestionItem(id=item["id"], question=item["question"], asked_at=item["asked_at"]) for item in records
     ]
     return RecentQuestionsResponse(recent_questions=recent_questions)

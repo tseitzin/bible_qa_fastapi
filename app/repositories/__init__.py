@@ -2,6 +2,7 @@
 
 All repository classes are re-exported here for convenient imports.
 """
+
 from app.repositories.api_request_log import ApiRequestLogRepository
 from app.repositories.cross_reference import CrossReferenceRepository
 from app.repositories.devotional_template import DevotionalTemplateRepository

@@ -1,4 +1,5 @@
 """FastAPI router exposing MCP-compatible endpoints."""
+
 from __future__ import annotations
 
 import logging

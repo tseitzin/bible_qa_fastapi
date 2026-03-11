@@ -1,4 +1,5 @@
 """Repository for API request logging and analytics."""
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -33,8 +34,17 @@ class ApiRequestLogRepository:
                          country_code, country_name, city)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        (user_id, endpoint, method, status_code, ip_address, payload_summary,
-                         country_code, country_name, city)
+                        (
+                            user_id,
+                            endpoint,
+                            method,
+                            status_code,
+                            ip_address,
+                            payload_summary,
+                            country_code,
+                            country_name,
+                            city,
+                        ),
                     )
                     conn.commit()
         except Exception as e:
@@ -57,7 +67,7 @@ class ApiRequestLogRepository:
                 query = [
                     "SELECT id, timestamp, user_id, endpoint, method, status_code, ip_address, payload_summary",
                     "FROM api_request_logs",
-                    "WHERE 1=1"
+                    "WHERE 1=1",
                 ]
                 params: List[Any] = []
 

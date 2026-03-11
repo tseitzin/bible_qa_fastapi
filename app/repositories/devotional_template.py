@@ -1,4 +1,5 @@
 """Repository for devotional scaffolding templates."""
+
 import json
 from typing import Any, List, Optional
 

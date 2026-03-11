@@ -1,4 +1,5 @@
 """Admin API endpoints for viewing API request logs."""
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/api/admin/logs", tags=["admin"])
 
 class ApiLogStats(BaseModel):
     """API usage statistics."""
+
     total_requests: int
     unique_users: int
     successful_requests: int
@@ -21,6 +23,7 @@ class ApiLogStats(BaseModel):
 
 class EndpointStats(BaseModel):
     """Statistics for a single endpoint."""
+
     endpoint: str
     request_count: int
     success_rate: float
@@ -77,7 +80,7 @@ async def get_api_stats(
                 "unique_users": int(result.get("unique_users", 0)),
                 "successful_requests": int(result.get("successful_requests", 0)),
                 "error_requests": int(result.get("error_requests", 0)),
-                "openai_requests": int(result.get("openai_requests", 0))
+                "openai_requests": int(result.get("openai_requests", 0)),
             }
         else:
             return {
@@ -85,10 +88,11 @@ async def get_api_stats(
                 "unique_users": 0,
                 "successful_requests": 0,
                 "error_requests": 0,
-                "openai_requests": 0
+                "openai_requests": 0,
             }
     except Exception as e:
         import traceback
+
         print(f"Error in get_api_stats: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to fetch stats: {str(e)}")
@@ -168,7 +172,7 @@ async def get_openai_stats(
                 "avg_response_time_ms": float(result.get("avg_response_time_ms", 0) or 0),
                 "successful_calls": int(result.get("successful_calls", 0) or 0),
                 "error_calls": int(result.get("error_calls", 0) or 0),
-                "rate_limit_calls": int(result.get("rate_limit_calls", 0) or 0)
+                "rate_limit_calls": int(result.get("rate_limit_calls", 0) or 0),
             }
         else:
             return {
@@ -181,10 +185,11 @@ async def get_openai_stats(
                 "avg_response_time_ms": 0,
                 "successful_calls": 0,
                 "error_calls": 0,
-                "rate_limit_calls": 0
+                "rate_limit_calls": 0,
             }
     except Exception as e:
         import traceback
+
         print(f"Error in get_openai_stats: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to fetch OpenAI stats: {str(e)}")

@@ -1,4 +1,5 @@
 """Pydantic models for request/response schemas."""
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -7,26 +8,32 @@ from pydantic import BaseModel, EmailStr, Field
 
 class QuestionRequest(BaseModel):
     """Request model for asking questions."""
+
     question: str = Field(..., min_length=1, max_length=1000, description="The question to ask")
     user_id: int = Field(default=1, description="User ID (set by the server from auth context)")
 
 
 class ConversationMessage(BaseModel):
     """Model for a single message in conversation history."""
+
     role: str = Field(..., description="Message role: 'user' or 'assistant'")
     content: str = Field(..., description="Message content")
 
 
 class FollowUpQuestionRequest(BaseModel):
     """Request model for follow-up questions."""
+
     question: str = Field(..., min_length=1, max_length=1000, description="The follow-up question")
-    conversation_history: List[ConversationMessage] = Field(default_factory=list, description="Previous conversation context")
+    conversation_history: List[ConversationMessage] = Field(
+        default_factory=list, description="Previous conversation context"
+    )
     user_id: int = Field(default=1, description="User ID")
     parent_question_id: Optional[int] = Field(None, description="ID of the original question this follows up on")
 
 
 class QuestionResponse(BaseModel):
     """Response model for question answers."""
+
     answer: str = Field(..., description="The AI-generated answer")
     question_id: int = Field(..., description="The ID of the stored question")
     is_biblical: bool = Field(..., description="Whether the AI response is considered biblical")
@@ -34,6 +41,7 @@ class QuestionResponse(BaseModel):
 
 class BibleVerseResponse(BaseModel):
     """Response model for Bible verse lookups."""
+
     reference: str = Field(..., description="Full verse reference, e.g. 'John 3:16'")
     book: str = Field(..., description="Book name")
     chapter: int = Field(..., ge=1, description="Chapter number")
@@ -43,10 +51,13 @@ class BibleVerseResponse(BaseModel):
 
 class BiblePassageResponse(BaseModel):
     """Response model for multi-verse passage lookups."""
+
     reference: str = Field(..., description="Human-readable reference string")
     book: str = Field(..., description="Book name")
     chapter: int = Field(..., ge=1, description="Chapter number")
-    end_chapter: Optional[int] = Field(default=None, description="Ending chapter when the passage spans multiple chapters")
+    end_chapter: Optional[int] = Field(
+        default=None, description="Ending chapter when the passage spans multiple chapters"
+    )
     start_verse: Optional[int] = Field(default=None, description="First verse in the passage")
     end_verse: Optional[int] = Field(default=None, description="Last verse in the passage")
     verses: List[BibleVerseResponse] = Field(..., description="Ordered verses in the passage")
@@ -54,6 +65,7 @@ class BiblePassageResponse(BaseModel):
 
 class HistoryItem(BaseModel):
     """Model for question history items."""
+
     id: int
     question: str
     answer: Optional[str]
@@ -62,17 +74,20 @@ class HistoryItem(BaseModel):
 
 class HistoryResponse(BaseModel):
     """Response model for question history."""
+
     questions: list[HistoryItem]
     total: int
 
 
 class RecentQuestionCreate(BaseModel):
     """Request model for manually recording a recent question."""
+
     question: str = Field(..., min_length=1, max_length=1000, description="Question text")
 
 
 class RecentQuestionItem(BaseModel):
     """Response model for a single recent question entry."""
+
     id: int
     question: str
     asked_at: datetime
@@ -80,11 +95,13 @@ class RecentQuestionItem(BaseModel):
 
 class RecentQuestionsResponse(BaseModel):
     """Response model wrapping recent questions list."""
+
     recent_questions: List[RecentQuestionItem]
 
 
 class HealthCheck(BaseModel):
     """Health check response model."""
+
     status: str
     timestamp: datetime
     version: str = "1.0.0"
@@ -93,6 +110,7 @@ class HealthCheck(BaseModel):
 # Authentication Schemas
 class UserCreate(BaseModel):
     """Request model for user registration."""
+
     email: EmailStr = Field(..., description="User's email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     password: str = Field(..., min_length=8, max_length=100, description="Password")
@@ -101,12 +119,14 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """Request model for user login."""
+
     email: EmailStr = Field(..., description="User's email address")
     password: str = Field(..., description="Password")
 
 
 class User(BaseModel):
     """Response model for user data."""
+
     id: int
     email: str
     username: str
@@ -118,12 +138,14 @@ class User(BaseModel):
 # Saved Answers Schemas
 class SavedAnswerCreate(BaseModel):
     """Request model for saving an answer."""
+
     question_id: int = Field(..., description="ID of the question to save")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
 
 
 class ThreadItem(BaseModel):
     """Model for a single item in a conversation thread."""
+
     id: int
     question: str
     answer: Optional[str]
@@ -134,6 +156,7 @@ class ThreadItem(BaseModel):
 
 class SavedAnswerResponse(BaseModel):
     """Response model for a saved answer."""
+
     id: int
     question_id: int
     question: str
@@ -149,18 +172,21 @@ class SavedAnswerResponse(BaseModel):
 
 class SavedAnswersListResponse(BaseModel):
     """Response model for list of saved answers."""
+
     saved_answers: List[SavedAnswerResponse]
     total: int
 
 
 class CrossReferenceEntry(BaseModel):
     """Single cross reference entry."""
+
     reference: str
     note: Optional[str] = None
 
 
 class CrossReferenceResponse(BaseModel):
     """Response for cross reference lookups."""
+
     book: str
     chapter: int
     verse: int
@@ -169,12 +195,14 @@ class CrossReferenceResponse(BaseModel):
 
 class TopicReferenceEntry(BaseModel):
     """Reference associated with a topical theme."""
+
     passage: str
     note: Optional[str] = None
 
 
 class TopicEntry(BaseModel):
     """Single topical index item."""
+
     topic: str
     summary: Optional[str] = None
     keywords: List[str] = Field(default_factory=list)
@@ -183,12 +211,14 @@ class TopicEntry(BaseModel):
 
 class TopicSearchResponse(BaseModel):
     """Wrapper for topical search results."""
+
     keyword: Optional[str] = None
     results: List[TopicEntry]
 
 
 class ReadingPlanMeta(BaseModel):
     """Metadata describing a reading plan."""
+
     slug: str
     name: str
     description: Optional[str] = None
@@ -198,6 +228,7 @@ class ReadingPlanMeta(BaseModel):
 
 class ReadingPlanScheduleItem(BaseModel):
     """Single day entry for a reading plan."""
+
     day_number: int
     title: str
     passage: str
@@ -208,19 +239,24 @@ class ReadingPlanScheduleItem(BaseModel):
 
 class ReadingPlanDetailResponse(BaseModel):
     """Detailed reading plan payload."""
+
     plan: ReadingPlanMeta
     schedule: List[ReadingPlanScheduleItem]
 
 
 class UserReadingPlanCreate(BaseModel):
     """Payload for starting a tracked reading plan."""
+
     plan_slug: str = Field(..., min_length=2, description="Slug of the reading plan to track")
     start_date: Optional[str] = Field(default=None, description="Optional ISO date to begin the plan")
-    nickname: Optional[str] = Field(default=None, max_length=100, description="Friendly label to distinguish this plan instance")
+    nickname: Optional[str] = Field(
+        default=None, max_length=100, description="Friendly label to distinguish this plan instance"
+    )
 
 
 class UserReadingPlanSummary(BaseModel):
     """Summary of a tracked reading plan instance for a user."""
+
     id: int
     plan: ReadingPlanMeta
     start_date: Optional[str] = None
@@ -236,22 +272,26 @@ class UserReadingPlanSummary(BaseModel):
 
 class UserReadingPlanScheduleItem(ReadingPlanScheduleItem):
     """Schedule entry annotated with user completion state."""
+
     is_complete: bool = False
     completed_at: Optional[str] = None
 
 
 class UserReadingPlanDetailResponse(UserReadingPlanSummary):
     """Tracked reading plan detail including personalized schedule."""
+
     schedule: List[UserReadingPlanScheduleItem]
 
 
 class ReadingPlanDayCompletionUpdate(BaseModel):
     """Request body for toggling day completion."""
+
     is_complete: bool = Field(..., description="Whether the day should be marked complete")
 
 
 class ReadingPlanDayCompletionStatus(BaseModel):
     """Response summarizing completion action results."""
+
     day_number: int
     is_complete: bool
     completed_at: Optional[str] = None
@@ -263,6 +303,7 @@ class ReadingPlanDayCompletionStatus(BaseModel):
 
 class DevotionalTemplate(BaseModel):
     """Template metadata for devotional generation."""
+
     slug: str
     title: str
     body: str
@@ -274,6 +315,7 @@ class DevotionalTemplate(BaseModel):
 
 class DevotionalRequest(BaseModel):
     """Request payload for devotional generation."""
+
     topic: str = Field(..., min_length=2)
     template_slug: Optional[str] = Field(default="classic", description="Slug of template to use")
     passage: Optional[str] = None
@@ -283,6 +325,7 @@ class DevotionalRequest(BaseModel):
 
 class GeneratedDevotionalResponse(BaseModel):
     """Response body for devotional generation."""
+
     title: str
     passage: Optional[str] = None
     summary: str
@@ -293,6 +336,7 @@ class GeneratedDevotionalResponse(BaseModel):
 # Page Analytics Schemas
 class PageViewRequest(BaseModel):
     """Request model for logging a page view."""
+
     session_id: str
     page_path: str
     page_title: Optional[str] = None
@@ -301,6 +345,7 @@ class PageViewRequest(BaseModel):
 
 class PageMetricsUpdate(BaseModel):
     """Request model for updating page metrics."""
+
     page_analytics_id: int
     visit_duration_seconds: Optional[int] = None
     max_scroll_depth_percent: Optional[int] = None
@@ -308,6 +353,7 @@ class PageMetricsUpdate(BaseModel):
 
 class ClickEventRequest(BaseModel):
     """Request model for logging a click event."""
+
     session_id: str
     page_path: str
     page_analytics_id: Optional[int] = None
@@ -318,3 +364,120 @@ class ClickEventRequest(BaseModel):
     click_position_x: Optional[int] = None
     click_position_y: Optional[int] = None
 
+
+# ─── Trivia Models ─────────────────────────────────────────────────────────
+
+
+class TriviaQuestionResponse(BaseModel):
+    """A trivia question sent to the client — never includes correct_answer."""
+
+    id: int
+    question_text: str
+    question_type: str
+    category: str
+    difficulty: str
+    options: List[str]
+    correct_index: Optional[int] = None  # Sent to client for visual feedback only; server re-validates score
+    scripture_reference: Optional[str] = None
+
+
+class TriviaRoundResponse(BaseModel):
+    """Response containing a set of trivia questions for one game round."""
+
+    questions: List[TriviaQuestionResponse]
+    category: str
+    difficulty: str
+    total: int
+
+
+class TriviaAnswerSubmit(BaseModel):
+    """A single answer submission within a game session."""
+
+    question_id: int
+    chosen_answer: str
+    is_correct: bool
+    time_seconds: Optional[int] = None
+
+
+class TriviaSessionSubmitRequest(BaseModel):
+    """Request body for submitting a completed trivia game session."""
+
+    category: str
+    difficulty: str
+    question_count: int = Field(..., ge=5, le=20)
+    answers: List[TriviaAnswerSubmit]
+    timer_enabled: bool = False
+    is_daily_challenge: bool = False
+    daily_date: Optional[str] = None
+
+
+class TriviaScoreBreakdown(BaseModel):
+    """Detailed breakdown of how a trivia score was calculated."""
+
+    total_score: int
+    base_score: int
+    time_bonus: int
+    streak_bonus: int
+    correct_count: int
+    accuracy_percent: float
+    streak_max: int
+
+
+class TriviaAnswerReview(BaseModel):
+    """Per-question review entry returned after session submission."""
+
+    question_id: int
+    question_text: str
+    chosen_answer: str
+    correct_answer: str
+    explanation: Optional[str]
+    scripture_reference: Optional[str]
+    is_correct: bool
+
+
+class TriviaSessionResultResponse(BaseModel):
+    """Full result returned after a trivia session is submitted."""
+
+    session_id: int
+    score_breakdown: TriviaScoreBreakdown
+    leaderboard_position: Optional[int] = None
+    answers_review: List[TriviaAnswerReview]
+
+
+class TriviaLeaderboardEntry(BaseModel):
+    """A single row in the trivia leaderboard."""
+
+    rank: int
+    user_id: int
+    username: str
+    best_score: int
+    avg_accuracy: float
+    total_games: int
+
+
+class TriviaLeaderboardResponse(BaseModel):
+    """Full leaderboard response with optional filters and caller's rank."""
+
+    entries: List[TriviaLeaderboardEntry]
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
+    period: str
+    user_rank: Optional[int] = None
+
+
+class TriviaAnswerSubmitRequest(BaseModel):
+    """Request body for submitting a daily challenge single answer."""
+
+    question_id: int
+    chosen_answer: str
+    time_seconds: Optional[int] = None
+
+
+class TriviaAnswerResultResponse(BaseModel):
+    """Result returned after a daily challenge answer is submitted."""
+
+    is_correct: bool
+    correct_answer: str
+    explanation: Optional[str]
+    scripture_reference: Optional[str]
+    score: int

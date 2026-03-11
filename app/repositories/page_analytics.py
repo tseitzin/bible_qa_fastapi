@@ -1,4 +1,5 @@
 """Repository for page analytics and user behavior tracking."""
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -35,8 +36,18 @@ class PageAnalyticsRepository:
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                         """,
-                        (user_id, session_id, page_path, page_title, referrer, user_agent,
-                         ip_address, country_code, country_name, city)
+                        (
+                            user_id,
+                            session_id,
+                            page_path,
+                            page_title,
+                            referrer,
+                            user_agent,
+                            ip_address,
+                            country_code,
+                            country_name,
+                            city,
+                        ),
                     )
                     page_analytics_id = cur.fetchone()["id"]
                     conn.commit()
@@ -104,8 +115,18 @@ class PageAnalyticsRepository:
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                         """,
-                        (page_analytics_id, user_id, session_id, page_path, element_type,
-                         element_id, element_text, element_class, click_position_x, click_position_y)
+                        (
+                            page_analytics_id,
+                            user_id,
+                            session_id,
+                            page_path,
+                            element_type,
+                            element_id,
+                            element_text,
+                            element_class,
+                            click_position_x,
+                            click_position_y,
+                        ),
                     )
                     click_event_id = cur.fetchone()["id"]
 
@@ -113,7 +134,7 @@ class PageAnalyticsRepository:
                     if page_analytics_id:
                         cur.execute(
                             "UPDATE page_analytics SET clicks_count = clicks_count + 1 WHERE id = %s",
-                            (page_analytics_id,)
+                            (page_analytics_id,),
                         )
 
                     conn.commit()

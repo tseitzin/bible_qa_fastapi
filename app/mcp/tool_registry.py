@@ -1,4 +1,5 @@
 """Central registry for MCP tool declarations."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

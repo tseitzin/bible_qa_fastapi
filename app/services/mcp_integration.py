@@ -1,4 +1,5 @@
 """Integration layer between MCP tools and OpenAI function calling."""
+
 from __future__ import annotations
 
 import logging
@@ -31,8 +32,8 @@ def get_bible_tools_for_openai() -> List[Dict[str, Any]]:
             "function": {
                 "name": mcp_tool.name,
                 "description": mcp_tool.description,
-                "parameters": mcp_tool.input_schema
-            }
+                "parameters": mcp_tool.input_schema,
+            },
         }
         openai_tools.append(openai_tool)
 

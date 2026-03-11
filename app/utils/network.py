@@ -1,4 +1,5 @@
 """Network utility functions."""
+
 from starlette.requests import Request
 
 

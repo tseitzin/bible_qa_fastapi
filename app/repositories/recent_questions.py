@@ -1,4 +1,5 @@
 """Repository for managing the recent questions cache per user."""
+
 from app.database import get_db_connection
 
 
@@ -23,7 +24,7 @@ class RecentQuestionsRepository:
                         SET asked_at = CURRENT_TIMESTAMP
                     RETURNING id;
                     """,
-                    (user_id, question)
+                    (user_id, question),
                 )
 
                 # Trim to the most recent entries only
@@ -38,7 +39,7 @@ class RecentQuestionsRepository:
                         LIMIT %s
                       );
                     """,
-                    (user_id, user_id, cls.MAX_RECENT_QUESTIONS)
+                    (user_id, user_id, cls.MAX_RECENT_QUESTIONS),
                 )
 
                 conn.commit()
@@ -61,7 +62,7 @@ class RecentQuestionsRepository:
                     ORDER BY asked_at DESC
                     LIMIT %s;
                     """,
-                    (user_id, limit)
+                    (user_id, limit),
                 )
                 return cur.fetchall()
 
@@ -73,10 +74,7 @@ class RecentQuestionsRepository:
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM recent_questions WHERE user_id = %s;",
-                    (user_id,)
-                )
+                cur.execute("DELETE FROM recent_questions WHERE user_id = %s;", (user_id,))
                 conn.commit()
 
     @staticmethod
@@ -88,8 +86,7 @@ class RecentQuestionsRepository:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "DELETE FROM recent_questions WHERE id = %s AND user_id = %s;",
-                    (recent_question_id, user_id)
+                    "DELETE FROM recent_questions WHERE id = %s AND user_id = %s;", (recent_question_id, user_id)
                 )
                 deleted = cur.rowcount > 0
                 conn.commit()

@@ -1,4 +1,5 @@
 """Middleware for logging API requests."""
+
 import json
 import logging
 
@@ -32,7 +33,7 @@ class ApiRequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Lookup geolocation for the IP (async, don't block)
             geolocation = None
-            if ip_address and not ip_address.startswith('10.'):
+            if ip_address and not ip_address.startswith("10."):
                 try:
                     geolocation = await GeolocationService.lookup_ip(ip_address)
                 except Exception as geo_error:
@@ -57,9 +58,9 @@ class ApiRequestLoggingMiddleware(BaseHTTPMiddleware):
                 status_code=response.status_code,
                 ip_address=ip_address,
                 payload_summary=payload_summary,
-                country_code=geolocation.get('country_code') if geolocation else None,
-                country_name=geolocation.get('country_name') if geolocation else None,
-                city=geolocation.get('city') if geolocation else None,
+                country_code=geolocation.get("country_code") if geolocation else None,
+                country_name=geolocation.get("country_name") if geolocation else None,
+                city=geolocation.get("city") if geolocation else None,
             )
         except Exception as e:
             # Don't break the app if logging fails

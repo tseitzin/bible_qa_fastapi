@@ -1,4 +1,5 @@
 """Phase 2 MCP tools for user-specific data interactions."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -42,7 +43,7 @@ def _register_user_tools() -> None:
                     "tags": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Optional topical tags or verse citations."
+                        "description": "Optional topical tags or verse citations.",
                     },
                 },
                 "required": ["question_id"],

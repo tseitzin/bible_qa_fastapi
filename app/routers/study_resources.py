@@ -1,4 +1,5 @@
 """API routes for study resource utilities (cross references, topics, plans, devotionals)."""
+
 from typing import List
 
 from fastapi import APIRouter, Depends, Query

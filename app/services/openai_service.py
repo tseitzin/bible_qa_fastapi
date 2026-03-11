@@ -1,4 +1,5 @@
 """OpenAI service for handling AI completions."""
+
 from __future__ import annotations
 
 import asyncio
@@ -23,8 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 NON_BIBLICAL_RESPONSE = (
-    "This app is only for researching and asking questions about God's word. "
-    "Please ask a Bible-related question."
+    "This app is only for researching and asking questions about God's word. Please ask a Bible-related question."
 )
 
 SYSTEM_PROMPT = (
@@ -89,7 +89,7 @@ class OpenAIService:
                 method="POST",
                 status_code=200,
                 ip_address=client_ip,
-                payload_summary=json.dumps({"question": question[:100], "has_history": bool(conversation_history)})
+                payload_summary=json.dumps({"question": question[:100], "has_history": bool(conversation_history)}),
             )
             return answer
         except (BadRequestError, RateLimitError, APITimeoutError, APIConnectionError, APIError) as exc:
@@ -100,7 +100,7 @@ class OpenAIService:
                 method="POST",
                 status_code=500,
                 ip_address=client_ip,
-                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]})
+                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]}),
             )
             logger.error("OpenAI API error: %s", exc)
             raise OpenAIError("AI service unavailable") from exc
@@ -114,7 +114,7 @@ class OpenAIService:
                 method="POST",
                 status_code=500,
                 ip_address=client_ip,
-                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]})
+                payload_summary=json.dumps({"question": question[:100], "error": str(exc)[:100]}),
             )
             logger.exception("Unexpected OpenAI failure")
             raise OpenAIError("AI service unavailable") from exc
@@ -155,7 +155,13 @@ class OpenAIService:
             logger.exception("Unexpected OpenAI failure")
             raise OpenAIError("AI service unavailable") from exc
 
-    async def _chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_id: Optional[int] = None, question: Optional[str] = None) -> str:
+    async def _chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        user_id: Optional[int] = None,
+        question: Optional[str] = None,
+    ) -> str:
         """Execute a chat completion with function calling support."""
         import time
 
@@ -190,7 +196,7 @@ class OpenAIService:
             logger.info(f"OpenAI API call completed in {elapsed:.2f}s (iteration {iteration})")
 
             # Accumulate token usage
-            if hasattr(response, 'usage') and response.usage:
+            if hasattr(response, "usage") and response.usage:
                 total_prompt_tokens += response.usage.prompt_tokens
                 total_completion_tokens += response.usage.completion_tokens
                 total_tokens += response.usage.total_tokens
@@ -206,7 +212,9 @@ class OpenAIService:
                 # Handle token limit reached
                 if finish_reason == "length" and not content:
                     logger.warning("OpenAI hit token limit. This usually happens when the question is too broad.")
-                    raise OpenAIError("The answer requires too many verses to fit in one response. Please try asking a more specific question.")
+                    raise OpenAIError(
+                        "The answer requires too many verses to fit in one response. Please try asking a more specific question."
+                    )
 
                 if not content:
                     logger.error(f"Empty response from OpenAI. Full message: {message.model_dump()}")
@@ -222,7 +230,7 @@ class OpenAIService:
                     completion_tokens=total_completion_tokens,
                     total_tokens=total_tokens,
                     status="success",
-                    response_time_ms=response_time_ms
+                    response_time_ms=response_time_ms,
                 )
 
                 return content.strip()
@@ -244,11 +252,7 @@ class OpenAIService:
                     logger.error(f"Tool execution failed: {e}")
                     result_content = json.dumps({"error": str(e)})
 
-                return {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": result_content
-                }
+                return {"role": "tool", "tool_call_id": tool_call.id, "content": result_content}
 
             # Execute all tool calls in parallel
             tool_results = await asyncio.gather(*[execute_tool_async(tc) for tc in message.tool_calls])
@@ -258,7 +262,13 @@ class OpenAIService:
 
         raise OpenAIError("Maximum tool iterations reached")
 
-    async def _stream_chat_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], user_id: Optional[int] = None, question: Optional[str] = None):
+    async def _stream_chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        user_id: Optional[int] = None,
+        question: Optional[str] = None,
+    ):
         """Execute a streaming chat completion with function calling support.
 
         Yields status updates during tool execution and streams the final answer tokens.
@@ -296,7 +306,7 @@ class OpenAIService:
             logger.info(f"OpenAI API call completed in {elapsed:.2f}s (iteration {iteration})")
 
             # Accumulate token usage
-            if hasattr(response, 'usage') and response.usage:
+            if hasattr(response, "usage") and response.usage:
                 total_prompt_tokens += response.usage.prompt_tokens
                 total_completion_tokens += response.usage.completion_tokens
                 total_tokens += response.usage.total_tokens
@@ -326,11 +336,7 @@ class OpenAIService:
                         logger.error(f"Tool execution failed: {e}")
                         result_content = json.dumps({"error": str(e)})
 
-                    return {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": result_content
-                    }
+                    return {"role": "tool", "tool_call_id": tool_call.id, "content": result_content}
 
                 # Execute all tool calls in parallel
                 tool_results = await asyncio.gather(*[execute_tool_async(tc) for tc in message.tool_calls])
@@ -366,7 +372,7 @@ class OpenAIService:
                         yield {"type": "content", "text": delta.content}
 
                     # Capture usage from final chunk
-                    if hasattr(chunk, 'usage') and chunk.usage:
+                    if hasattr(chunk, "usage") and chunk.usage:
                         stream_usage = chunk.usage
 
                     # Check for finish
@@ -389,7 +395,7 @@ class OpenAIService:
                             completion_tokens=total_completion_tokens,
                             total_tokens=total_tokens,
                             status="success",
-                            response_time_ms=response_time_ms
+                            response_time_ms=response_time_ms,
                         )
 
                         if finish_reason == "length":
@@ -408,22 +414,20 @@ class OpenAIService:
                 completion_tokens=total_completion_tokens,
                 total_tokens=total_tokens,
                 status="success",
-                response_time_ms=response_time_ms
+                response_time_ms=response_time_ms,
             )
             return
 
         raise OpenAIError("Maximum tool iterations reached")
 
-    def _normalize_history(
-        self, conversation_history: Iterable[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _normalize_history(self, conversation_history: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert stored history into Chat Completions format."""
         normalized: List[Dict[str, Any]] = []
         history_list = list(conversation_history or [])
 
         # Limit history if configured
         if self.max_history_messages > 0 and len(history_list) > self.max_history_messages:
-            history_list = history_list[-self.max_history_messages:]
+            history_list = history_list[-self.max_history_messages :]
 
         for message in history_list:
             role = self._get_message_field(message, "role", "user") or "user"

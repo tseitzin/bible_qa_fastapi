@@ -1,4 +1,5 @@
 """Routes for managing user-specific reading plan progress."""
+
 from typing import List
 
 from fastapi import APIRouter, Depends, Path, Response

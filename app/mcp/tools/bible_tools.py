@@ -1,4 +1,5 @@
 """Phase 1 MCP tools for scripture retrieval."""
+
 from __future__ import annotations
 
 from typing import Any, Dict

@@ -1,4 +1,5 @@
 """Repository for user-specific reading plan instances and progress."""
+
 import json
 from typing import Any, Dict, List, Optional
 
@@ -127,7 +128,7 @@ class UserReadingPlanRepository:
                     WHERE user_plan_id = %s
                     ORDER BY day_number ASC
                     """,
-                    (user_plan_id,)
+                    (user_plan_id,),
                 )
                 rows = cur.fetchall()
         return {row["day_number"]: row for row in rows}
@@ -177,7 +178,7 @@ class UserReadingPlanRepository:
                     FROM user_reading_plan_days
                     WHERE user_plan_id = %s
                     """,
-                    (user_plan_id,)
+                    (user_plan_id,),
                 )
                 row = cur.fetchone()
         return dict(row) if row else {"completed_days": 0, "last_completed_day": 0}
